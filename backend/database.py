@@ -22,22 +22,70 @@ def init_db() -> None:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS schedules (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                label       TEXT    NOT NULL,
                 time        TEXT    NOT NULL,        -- "HH:MM"
                 days        TEXT    NOT NULL,        -- JSON array e.g. ["mon","tue"]
-                temperature REAL    NOT NULL,
-                mode        TEXT    NOT NULL DEFAULT 'heat',
+                action      TEXT    NOT NULL DEFAULT 'setpoint',
+                temperature REAL,
+                mode        TEXT,
                 enabled     INTEGER NOT NULL DEFAULT 1,
                 created_at  TEXT    DEFAULT (datetime('now'))
             )
         """)
+        _migrate_schema(conn)
         conn.commit()
+
+
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    info = {
+        row["name"]: row
+        for row in conn.execute("PRAGMA table_info(schedules)").fetchall()
+    }
+    if not info:
+        return
+
+    needs_rebuild = (
+        "label" in info
+        or "action" not in info
+        or ("temperature" in info and info["temperature"]["notnull"] == 1)
+        or ("mode" in info and info["mode"]["notnull"] == 1)
+    )
+    if not needs_rebuild:
+        return
+
+    conn.execute("""
+        CREATE TABLE schedules_new (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            time        TEXT    NOT NULL,
+            days        TEXT    NOT NULL,
+            action      TEXT    NOT NULL DEFAULT 'setpoint',
+            temperature REAL,
+            mode        TEXT,
+            enabled     INTEGER NOT NULL DEFAULT 1,
+            created_at  TEXT    DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("""
+        INSERT INTO schedules_new (id, time, days, action, temperature, mode, enabled, created_at)
+        SELECT
+            id,
+            time,
+            days,
+            CASE WHEN COALESCE(action, 'setpoint') = 'off' THEN 'off' ELSE 'setpoint' END,
+            CASE WHEN COALESCE(action, 'setpoint') = 'off' THEN NULL ELSE temperature END,
+            CASE WHEN COALESCE(action, 'setpoint') = 'off' THEN NULL ELSE mode END,
+            enabled,
+            created_at
+        FROM schedules
+    """)
+    conn.execute("DROP TABLE schedules")
+    conn.execute("ALTER TABLE schedules_new RENAME TO schedules")
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["days"]    = json.loads(d["days"])
     d["enabled"] = bool(d["enabled"])
+    d.setdefault("action", "setpoint")
     return d
 
 
@@ -57,13 +105,15 @@ def get_one(schedule_id: int) -> dict | None:
     return _row_to_dict(row) if row else None
 
 
-def create(label: str, time: str, days: list, temperature: float,
-           mode: str, enabled: bool) -> int:
+def create(time: str, days: list, temperature: float | None,
+           mode: str | None, action: str, enabled: bool) -> int:
+    db_temp = None if action == "off" else temperature
+    db_mode = None if action == "off" else mode
     with _connect() as conn:
         cur = conn.execute(
-            """INSERT INTO schedules (label, time, days, temperature, mode, enabled)
+            """INSERT INTO schedules (time, days, action, temperature, mode, enabled)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (label, time, json.dumps(days), temperature, mode, int(enabled)),
+            (time, json.dumps(days), action, db_temp, db_mode, int(enabled)),
         )
         conn.commit()
         return cur.lastrowid

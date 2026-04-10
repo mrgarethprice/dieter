@@ -1,6 +1,6 @@
 # daikin-scheduler
 
-A self-hosted web app for scheduling temperature setpoints on a **Daikin FDYA / BRP15B61 Airbase** heat pump. Runs on a Synology NAS (or any Docker host) and installs as a home screen app on iOS and Android.
+A self-hosted web app for scheduling **set temperature** and **power off** actions on a **Daikin FDYA / BRP15B61 Airbase** heat pump. Runs on a Synology NAS (or any Docker host) and installs as a home screen app on iOS and Android.
 
 ![Dark UI showing temperature status and schedule list](screenshot.png)
 
@@ -8,7 +8,8 @@ A self-hosted web app for scheduling temperature setpoints on a **Daikin FDYA / 
 
 - **Live status** — current set temp, room temp, outdoor temp, mode
 - **Power toggle** — turn the unit on/off from the home screen
-- **Time-based scheduling** — add as many setpoints as you want, per day of week
+- **Time-based scheduling** — add as many schedules as you want, per day of week
+- **Off schedules** — create "power off" events that do not require a temperature
 - **PWA** — install on iOS / Android home screen; works like a native app
 - **Local-only** — communicates directly with the BRP15B61 on your LAN; no cloud required
 
@@ -111,6 +112,37 @@ Browser / PWA
 | PATCH | `/api/schedules/:id` | Update schedule |
 | DELETE | `/api/schedules/:id` | Delete schedule |
 
+### Schedule payloads
+
+Schedules no longer use a `label` field. Use `action` to choose behavior:
+
+- `setpoint` — turn unit on and apply `temperature` + `mode`
+- `off` — turn unit off; `temperature` and `mode` are optional/ignored
+
+Create setpoint schedule:
+
+```json
+{
+  "time": "07:00",
+  "days": ["mon", "tue", "wed", "thu", "fri"],
+  "action": "setpoint",
+  "temperature": 20,
+  "mode": "heat",
+  "enabled": true
+}
+```
+
+Create off schedule:
+
+```json
+{
+  "time": "22:30",
+  "days": ["sun", "mon", "tue", "wed", "thu"],
+  "action": "off",
+  "enabled": true
+}
+```
+
 ## Troubleshooting
 
 **"Unit unreachable"** — Check the `DAIKIN_HOST` in `.env` matches the unit's IP. Make sure your NAS and the Daikin are on the same network/VLAN.
@@ -136,4 +168,3 @@ Full list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 ## License
 
 MIT
-# diakin-scheduler

@@ -46,28 +46,33 @@ app.add_middleware(
 
 VALID_DAYS  = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 VALID_MODES = {"heat", "cool", "fan", "auto", "dry"}
+VALID_ACTIONS = {"setpoint", "off"}
 
 
 class ScheduleIn(BaseModel):
-    label:       str
     time:        str   = Field(pattern=r"^\d{2}:\d{2}$")
     days:        list[str]
-    temperature: float = Field(ge=16, le=30)
-    mode:        str   = "heat"
+    action:      str   = "setpoint"  # "setpoint" | "off"
+    temperature: Optional[float] = Field(default=None, ge=16, le=30)
+    mode:        Optional[str]   = "heat"
     enabled:     bool  = True
 
     def validate_fields(self):
         bad_days = set(self.days) - VALID_DAYS
         if bad_days:
             raise HTTPException(400, f"Unknown days: {bad_days}")
-        if self.mode not in VALID_MODES:
+        if self.action not in VALID_ACTIONS:
+            raise HTTPException(400, f"action must be one of {VALID_ACTIONS}")
+        if self.action == "setpoint" and self.temperature is None:
+            raise HTTPException(400, "temperature is required for setpoint schedules")
+        if self.action == "setpoint" and self.mode not in VALID_MODES:
             raise HTTPException(400, f"mode must be one of {VALID_MODES}")
 
 
 class SchedulePatch(BaseModel):
-    label:       Optional[str]   = None
     time:        Optional[str]   = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     days:        Optional[list[str]] = None
+    action:      Optional[str]   = None
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
     mode:        Optional[str]   = None
     enabled:     Optional[bool]  = None
@@ -108,8 +113,7 @@ def list_schedules():
 def create_schedule(body: ScheduleIn):
     body.validate_fields()
     new_id = database.create(
-        body.label, body.time, body.days,
-        body.temperature, body.mode, body.enabled,
+        body.time, body.days, body.temperature, body.mode, body.action, body.enabled,
     )
     sched.reload_jobs()
     return {"id": new_id, **database.get_one(new_id)}
@@ -120,7 +124,23 @@ def update_schedule(schedule_id: int, body: SchedulePatch):
     if not database.get_one(schedule_id):
         raise HTTPException(404, "Schedule not found")
     updates = body.model_dump(exclude_none=True)
+    if "action" in updates and updates["action"] not in VALID_ACTIONS:
+        raise HTTPException(400, f"action must be one of {VALID_ACTIONS}")
+    if "mode" in updates and updates["mode"] not in VALID_MODES:
+        raise HTTPException(400, f"mode must be one of {VALID_MODES}")
+    if "days" in updates:
+        bad_days = set(updates["days"]) - VALID_DAYS
+        if bad_days:
+            raise HTTPException(400, f"Unknown days: {bad_days}")
     if updates:
+        current = database.get_one(schedule_id)
+        action = updates.get("action", current.get("action", "setpoint"))
+        temperature = updates.get("temperature", current.get("temperature"))
+        if action == "setpoint" and temperature is None:
+            raise HTTPException(400, "temperature is required for setpoint schedules")
+        if action == "off":
+            updates["temperature"] = None
+            updates["mode"] = None
         database.update(schedule_id, **updates)
         sched.reload_jobs()
     return database.get_one(schedule_id)

@@ -222,6 +222,67 @@ input  { font-family: inherit; }
   letter-spacing: 0.8px;
 }
 
+.status-temp-control {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.tempctl-on {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(245,158,11,.3);
+  opacity: 1;
+}
+
+.tempctl-off {
+  background: rgba(255,255,255,.02);
+  opacity: 0.65;
+}
+
+.tempctl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+.tempctl-hint {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.tempctl-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.tempctl-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.tempctl-value {
+  min-width: 72px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  color: var(--amber);
+}
+
 /* ── Schedule Section ────────────────────────────────────────────────────────── */
 
 .section-header {

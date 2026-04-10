@@ -47,21 +47,30 @@ def reload_jobs() -> None:
             misfire_grace_time=60,
         )
         log.info(
-            "Job %s: %s on %s → %.1f°C (%s)",
-            s["id"], s["time"], s["days"], s["temperature"], s["mode"],
+            "Job %s: %s on %s → %s",
+            s["id"], s["time"], s["days"],
+            "OFF" if s.get("action") == "off" else f"{s['temperature']:.1f}°C ({s['mode']})",
         )
     log.info("Loaded %d active job(s)", len(_scheduler.get_jobs()))
 
 
 async def _apply(schedule: dict) -> None:
-    log.info("Firing: %s → %.1f°C (%s)", schedule["label"],
-             schedule["temperature"], schedule["mode"])
-    try:
-        await _daikin.set_control_info(
-            power="1",
-            mode=schedule["mode"],
-            temp=schedule["temperature"],
+    if schedule.get("action") == "off":
+        log.info("Firing: %s → OFF", schedule["id"])
+    else:
+        log.info(
+            "Firing: %s → %.1f°C (%s)",
+            schedule["id"], schedule["temperature"], schedule["mode"]
         )
+    try:
+        if schedule.get("action") == "off":
+            await _daikin.set_control_info(power="0")
+        else:
+            await _daikin.set_control_info(
+                power="1",
+                mode=schedule["mode"],
+                temp=schedule["temperature"],
+            )
     except Exception as exc:
         log.error("Failed to apply schedule %s: %s", schedule["id"], exc)
 

@@ -8,6 +8,8 @@ const DAY_LABELS = { mon:'Mo', tue:'Tu', wed:'We', thu:'Th', fri:'Fr', sat:'Sa',
 const MODES = ['heat','cool','fan','auto'];
 const MODE_ICONS = { heat:'🔥', cool:'❄️', fan:'💨', auto:'⟳' };
 const MODE_LABELS = { heat:'Heat', cool:'Cool', fan:'Fan', auto:'Auto' };
+const ACTIONS = ['setpoint', 'off'];
+const ACTION_LABELS = { setpoint: 'Set Temp', off: 'Power Off' };
 
 function api(path, opts = {}) {
   return fetch(API + path, {
@@ -21,9 +23,9 @@ function api(path, opts = {}) {
 }
 
 const DEFAULT_FORM = {
-  label: '',
   time: '07:00',
   days: ['mon','tue','wed','thu','fri'],
+  action: 'setpoint',
   temperature: 20,
   mode: 'heat',
   enabled: true,
@@ -63,6 +65,12 @@ function StatusCard({ status, onTogglePower, onTempChange }) {
 
   const isOn = status.power;
   const modeKey = status.mode || 'heat';
+  const setTemp = status.set_temp ?? 20;
+
+  const handleTempStep = async (delta) => {
+    const next = Math.max(16, Math.min(30, +(setTemp + delta).toFixed(1)));
+    await onTempChange(next);
+  };
 
   return (
     <div className={`status-card ${isOn ? 'status-on' : 'status-off'}`}>
@@ -97,12 +105,29 @@ function StatusCard({ status, onTogglePower, onTempChange }) {
         </span>
         <span className="status-state">{isOn ? 'Running' : 'Standby'}</span>
       </div>
+
+      <div className={`status-temp-control ${isOn ? 'tempctl-on' : 'tempctl-off'}`}>
+        <div className="tempctl-header">
+          <span>Set temperature</span>
+          {!isOn && <span className="tempctl-hint">Tap to wake unit</span>}
+        </div>
+        <div className="tempctl-buttons">
+          <button className="tempctl-btn" onClick={() => handleTempStep(-0.5)} aria-label="Lower set temperature">
+            −
+          </button>
+          <span className="tempctl-value">{setTemp}°C</span>
+          <button className="tempctl-btn" onClick={() => handleTempStep(+0.5)} aria-label="Raise set temperature">
+            +
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 function ScheduleItem({ schedule, onEdit, onDelete, onToggle }) {
   const dayStr = schedule.days.map(d => DAY_LABELS[d]).join(' ');
+  const isOff = schedule.action === 'off';
 
   return (
     <div className={`schedule-item ${schedule.enabled ? 'sched-enabled' : 'sched-disabled'}`}>
@@ -115,12 +140,18 @@ function ScheduleItem({ schedule, onEdit, onDelete, onToggle }) {
       <div className="sched-body" onClick={() => onEdit(schedule)}>
         <div className="sched-time">{schedule.time}</div>
         <div className="sched-meta">
-          <span className="sched-label">{schedule.label}</span>
+          <span className="sched-label">{isOff ? 'Power Off' : 'Set Temp'}</span>
           <span className="sched-days">{dayStr}</span>
         </div>
         <div className="sched-right">
-          <span className="sched-temp">{schedule.temperature}°</span>
-          <span className="sched-mode">{MODE_ICONS[schedule.mode]}</span>
+          {isOff ? (
+            <span className="sched-temp">OFF</span>
+          ) : (
+            <>
+              <span className="sched-temp">{schedule.temperature}°</span>
+              <span className="sched-mode">{MODE_ICONS[schedule.mode]}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -159,7 +190,6 @@ function ScheduleForm({ initial, onSave, onClose }) {
     set('days', form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d]);
 
   const handleSave = async () => {
-    if (!form.label.trim()) return;
     setSaving(true);
     try { await onSave(form); } finally { setSaving(false); }
   };
@@ -172,17 +202,6 @@ function ScheduleForm({ initial, onSave, onClose }) {
       <div className="form-header">
         <h2>{initial?.id ? 'Edit' : 'New'} Schedule</h2>
         <button className="form-close" onClick={onClose}>✕</button>
-      </div>
-
-      <div className="form-field">
-        <label>Label</label>
-        <input
-          className="form-input"
-          value={form.label}
-          onChange={e => set('label', e.target.value)}
-          placeholder="e.g. Morning warmup"
-          maxLength={40}
-        />
       </div>
 
       <div className="form-field">
@@ -211,6 +230,24 @@ function ScheduleForm({ initial, onSave, onClose }) {
       </div>
 
       <div className="form-field">
+        <label>Action</label>
+        <div className="mode-picker">
+          {ACTIONS.map(a => (
+            <button
+              key={a}
+              className={`mode-btn ${form.action === a ? 'mode-active' : ''}`}
+              onClick={() => set('action', a)}
+            >
+              <span>{a === 'off' ? '⏻' : '🌡️'}</span>
+              <span>{ACTION_LABELS[a]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {form.action === 'setpoint' && (
+        <>
+          <div className="form-field">
         <label>Temperature</label>
         <div className="temp-picker">
           <button className="temp-step" onClick={() => tempStep(-0.5)}>−</button>
@@ -240,11 +277,13 @@ function ScheduleForm({ initial, onSave, onClose }) {
           ))}
         </div>
       </div>
+        </>
+      )}
 
       <button
         className="save-btn"
         onClick={handleSave}
-        disabled={saving || !form.label.trim() || form.days.length === 0}
+        disabled={saving || form.days.length === 0}
       >
         {saving ? 'Saving…' : 'Save Schedule'}
       </button>
@@ -286,16 +325,30 @@ export default function App() {
     await loadStatus();
   };
 
+  const changeTemperature = async (temperature) => {
+    const body = status?.power
+      ? { temperature }
+      : { power: '1', temperature };
+    await api('/api/control', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    await loadStatus();
+  };
+
   const saveSchedule = async (form) => {
+    const payload = form.action === 'off'
+      ? { ...form, temperature: null, mode: null }
+      : form;
     if (form.id) {
       await api(`/api/schedules/${form.id}`, {
         method: 'PATCH',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
     } else {
       await api('/api/schedules', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
     }
     await loadSchedules();
@@ -326,7 +379,7 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <StatusCard status={status} onTogglePower={togglePower} />
+        <StatusCard status={status} onTogglePower={togglePower} onTempChange={changeTemperature} />
 
         <section className="schedule-section">
           <div className="section-header">
@@ -342,7 +395,7 @@ export default function App() {
             <div className="empty-state">
               <div className="empty-icon">⏱</div>
               <p>No schedules yet</p>
-              <p className="empty-sub">Tap + Add to create your first temperature setpoint</p>
+              <p className="empty-sub">Tap + Add to create your first schedule</p>
             </div>
           ) : (
             <div className="schedule-list">
