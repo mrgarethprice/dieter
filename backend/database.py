@@ -53,7 +53,13 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         return
 
     action_expr = "COALESCE(action, 'setpoint')" if "action" in info else "'setpoint'"
+    temperature_expr = "temperature" if "temperature" in info else "NULL"
+    mode_expr = "mode" if "mode" in info else "NULL"
+    enabled_expr = "enabled" if "enabled" in info else "1"
+    created_at_expr = "created_at" if "created_at" in info else "datetime('now')"
 
+    # Clean up any partial migration left behind by a previous failed startup.
+    conn.execute("DROP TABLE IF EXISTS schedules_new")
     conn.execute("""
         CREATE TABLE schedules_new (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,10 +79,10 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             time,
             days,
             CASE WHEN {action_expr} = 'off' THEN 'off' ELSE 'setpoint' END,
-            CASE WHEN {action_expr} = 'off' THEN NULL ELSE temperature END,
-            CASE WHEN {action_expr} = 'off' THEN NULL ELSE mode END,
-            enabled,
-            created_at
+            CASE WHEN {action_expr} = 'off' THEN NULL ELSE {temperature_expr} END,
+            CASE WHEN {action_expr} = 'off' THEN NULL ELSE {mode_expr} END,
+            {enabled_expr},
+            {created_at_expr}
         FROM schedules
     """)
     conn.execute("DROP TABLE schedules")
