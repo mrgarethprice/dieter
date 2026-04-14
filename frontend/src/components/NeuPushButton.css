@@ -1,0 +1,160 @@
+/**
+ * Neumorphic push-button toggle — circular momentary-style button.
+ *
+ * Configurable via props → CSS variable:
+ *   --npb-size  (set from size prop, default 80px)
+ *
+ * Off = raised with full shadow, grey icon.
+ * On  = depressed with reduced shadow, accent-coloured icon.
+ */
+
+.neu-push-btn {
+  --npb-size: 44px;
+  --npb-ease: cubic-bezier(0.03, -2, 0.56, 3);
+  --npb-duration: 0.14s;
+  --npb-rim: 2px;
+  --npb-face: calc(var(--npb-size) - var(--npb-rim));
+
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  outline: none;
+
+  position: relative;
+  width: var(--npb-size);
+  height: var(--npb-size);
+  border-radius: 50%;
+}
+
+/* ── Dark rim / bezel ────────────────────────────────────────────────── */
+
+.neu-push-btn__rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #a9a9a9 0%, #717171 40%, #2e2e2e 100%);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.07);
+  pointer-events: none;
+}
+
+/* ── Raised face ─────────────────────────────────────────────────────── */
+
+.neu-push-btn__face {
+  position: absolute;
+  left: 1px;
+  top: 0;
+  width: var(--npb-face);
+  height: var(--npb-face);
+  border-radius: 50%;
+
+  background: linear-gradient(
+    338deg,
+    #ffffff 0%,
+    var(--neu-face-from, #f2f2f2) 40%,
+    #d6d6d6 100%
+  );
+
+  /* Subtle concave dish — light rim top-left, shadow rim bottom-right */
+  box-shadow:
+    inset 2px 2px 4px rgba(255, 255, 255, 0.9),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.4),
+    inset -1px -1px 0px rgba(0, 0, 0, 0.1);
+
+  transition:
+    box-shadow var(--npb-duration) var(--npb-ease),
+    transform var(--npb-duration) var(--npb-ease);
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Drop shadow (outer, on the whole button) ────────────────────────── */
+
+.neu-push-btn__shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+
+  box-shadow:
+    rgba(0, 0, 0, 0.26) 0.6px 0.6px 0.8px -0.5px,
+    rgba(0, 0, 0, 0.25) 1.4px 1.4px 2px -1px,
+    rgba(0, 0, 0, 0.24) 2.6px 2.6px 3.7px -1.5px,
+    rgba(0, 0, 0, 0.23) 4.5px 4.5px 6.4px -2px,
+    rgba(0, 0, 0, 0.2) 7.5px 7.5px 10.6px -2.5px,
+    rgba(0, 0, 0, 0.16) 13px 13px 18.4px -3px,
+    rgba(0, 0, 0, 0.09) 25px 25px 35.4px -3.5px;
+
+  transition:
+    box-shadow var(--npb-duration) var(--npb-ease),
+    transform var(--npb-duration) var(--npb-ease);
+}
+
+/* ── Icon container ──────────────────────────────────────────────────── */
+
+.neu-push-btn__icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--npb-face) * 0.08);
+  color: #aaa;
+  transition: color var(--npb-duration) ease;
+  font-size: calc(var(--npb-face) * 0.32);
+  line-height: 1;
+}
+
+/* Default pause-bar icon via children spans */
+.neu-push-btn__bar {
+  width: calc(var(--npb-face) * 0.065);
+  height: calc(var(--npb-face) * 0.28);
+  border-radius: calc(var(--npb-face) * 0.03);
+  background: currentColor;
+}
+
+/* ── On state — depressed ────────────────────────────────────────────── */
+
+.neu-push-btn--on .neu-push-btn__face {
+  /* box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.12),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.6); */
+  transform: translateY(1.5px);
+}
+
+.neu-push-btn--on .neu-push-btn__shadow {
+  box-shadow:
+    rgba(0, 0, 0, 0.18) 0.3px 0.3px 0.5px -0.5px,
+    rgba(0, 0, 0, 0.15) 0.7px 0.7px 1px -1px,
+    rgba(0, 0, 0, 0.12) 1.2px 1.2px 1.7px -1.5px,
+    rgba(0, 0, 0, 0.08) 2px 2px 2.8px -2px;
+  transform: translateY(1.5px);
+}
+
+.neu-push-btn--on .neu-push-btn__icon {
+  color: var(--neu-accent, #f9601b);
+}
+
+/* ── Focus ring ──────────────────────────────────────────────────────── */
+
+.neu-push-btn:focus-visible {
+  outline: 2px solid var(--neu-accent, #f9601b);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+/* ── Active press feedback ───────────────────────────────────────────── */
+
+.neu-push-btn:active .neu-push-btn__face {
+  transform: translateY(1px) scale(0.98);
+}

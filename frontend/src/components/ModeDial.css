@@ -1,0 +1,173 @@
+/**
+ * Neumorphic mode dial — all visual tokens are CSS variables on `.mode-dial`
+ * so the same variables can be copied to other components for a matching system.
+ */
+
+.mode-dial {
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  --md-size: 92px;
+  --md-pad: 28px;
+  --md-orbit-radius: 72px;
+  --md-knob-diameter: 168px;
+  --md-icon-hit: 48px;
+  --md-icon-glyph: 24px;
+  --md-pointer-size: 8px;
+  --md-pointer-inset: 50px;
+
+  /* ── Colors (wired to shared --neu-* tokens in :root) ─────────────────── */
+  --md-canvas-bg: var(--neu-canvas);
+  --md-accent: var(--neu-accent);
+  --md-icon-idle: var(--neu-idle);
+  --md-icon-active: var(--md-accent);
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --md-transition-knob: 0.55s cubic-bezier(0.34, 1.2, 0.45, 1);
+  --md-transition-icon: 0.35s ease;
+
+  /* Runtime: knob rotation (deg), set from JS */
+  --md-knob-rotate: 0deg;
+
+  position: relative;
+  width: calc(var(--md-orbit-radius) * 2 + var(--md-icon-hit));
+  height: calc(var(--md-orbit-radius) * 2 + var(--md-icon-hit));
+  flex-shrink: 0;
+}
+
+.mode-dial__surface {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.mode-dial__orbit {
+  position: absolute;
+  inset: var(--md-pad);
+}
+
+/* Icon slots: angle deg passed as --slot-angle */
+.mode-dial__slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--md-icon-hit);
+  height: var(--md-icon-hit);
+  margin: calc(var(--md-icon-hit) / -2) 0 0 calc(var(--md-icon-hit) / -2);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transform: rotate(var(--slot-angle))
+    translateY(calc(var(--md-orbit-radius) * -1))
+    rotate(calc(var(--slot-angle) * -1));
+  color: var(--md-icon-idle);
+  transition:
+    color var(--md-transition-icon),
+    transform 0.2s ease,
+    filter var(--md-transition-icon);
+  z-index: 2;
+  mix-blend-mode: multiply;
+}
+
+.mode-dial__slot i {
+  font-size: var(--md-icon-glyph);
+  line-height: 1;
+  display: block;
+  transition: inherit;
+}
+
+.mode-dial__slot:hover,
+.mode-dial__slot:focus-visible {
+  outline: none;
+}
+
+/* .mode-dial__slot:active {
+  transform: rotate(var(--slot-angle))
+    translateY(calc(var(--md-orbit-radius) * -1 - 1px))
+    rotate(calc(var(--slot-angle) * -1));
+} */
+
+.mode-dial__slot--active {
+  color: var(--md-icon-active);
+}
+
+.mode-dial__knob-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--md-knob-diameter);
+  height: var(--md-knob-diameter);
+  margin: calc(var(--md-knob-diameter) / -2) 0 0
+    calc(var(--md-knob-diameter) / -2);
+  z-index: 1;
+}
+
+/*
+ * Fixed in screen space — gradient and shadows never rotate with the knob.
+ *
+ * font-size is set to the knob's diameter so that all em values below
+ * are proportional to the element size (original values were for a 72px element,
+ * so every px value is divided by 72 to get em).
+ */
+.mode-dial__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--md-size);
+  height: var(--md-size);
+  margin-inline: auto;
+  border-radius: 50%;
+  background-color: rgb(238, 238, 238);
+  background: linear-gradient(
+    127deg,
+    rgb(255, 255, 255) 15%,
+    rgba(110, 110, 110, 0.5) 85.9454%
+  );
+  box-shadow:
+    rgb(255, 255, 255) 3px 3px 4px 1px inset,
+    rgba(0, 0, 0, 0.45) -3px -3px 4px 1px inset,
+    rgba(0, 0, 0, 0.26) 0.587862px 0.587862px 0.831362px -0.46875px,
+    rgba(0, 0, 0, 0.255) 1.39334px 1.39334px 1.97047px -0.9375px,
+    rgba(0, 0, 0, 0.25) 2.54159px 2.54159px 3.59435px -1.40625px,
+    rgba(0, 0, 0, 0.243) 4.22539px 4.22539px 5.9756px -1.875px,
+    rgba(0, 0, 0, 0.227) 6.82365px 6.82365px 9.6501px -2.34375px,
+    rgba(0, 0, 0, 0.208) 11.1696px 11.1696px 15.7963px -2.8125px,
+    rgba(0, 0, 0, 0.165) 19.2334px 19.2334px 27.2001px -3.28125px,
+    rgba(0, 0, 0, 0.086) 35px 35px 49.4975px -3.75px;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+}
+
+.mode-dial__knob::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(var(--neu-face-from) 0%, var(--neu-face-to) 100%);
+  filter: blur(8px);
+  opacity: 1;
+}
+
+/* Only the indicator rotates; outer shell and shadows stay fixed. */
+.mode-dial__knob-pointer-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: rotate(var(--md-knob-rotate));
+  transition: transform var(--md-transition-knob);
+  will-change: transform;
+}
+
+.mode-dial__pointer {
+  position: absolute;
+  left: 50%;
+  top: var(--md-pointer-inset);
+  width: var(--md-pointer-size);
+  height: var(--md-pointer-size);
+  margin-left: calc(var(--md-pointer-size) / -2);
+  border-radius: 50%;
+  background: var(--md-accent);
+  box-shadow: rgba(0, 0, 0, 0.07) 0px 0px 1px 0.4px inset;
+}

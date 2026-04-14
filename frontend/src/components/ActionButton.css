@@ -1,0 +1,27 @@
+.action-button {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  font-weight: 500;
+  padding: 8px 4px;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.action-button:active {
+  opacity: 0.7;
+}
+
+.action-button--primary {
+  color: var(--neu-accent);
+}
+
+.action-button--secondary {
+  color: var(--neu-text-muted);
+  font-weight: 400;
+}
