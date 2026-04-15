@@ -353,12 +353,20 @@ export default function App() {
   const [localTemp, setLocalTemp] = useState(24);
   const [localPower, setLocalPower] = useState(true);
 
+  // After a user action, ignore device state echoes for a grace period so
+  // optimistic UI isn't overwritten by a stale read-back from the Daikin.
+  const lastActionRef = useRef(0);
+  const GRACE_MS = 5000;
+
   const loadStatus = useCallback(async () => {
     try {
       const s = await api("/api/status");
       setStatus(s);
-      if (s.set_temp != null) setLocalTemp(s.set_temp);
-      if (s.power != null) setLocalPower(s.power);
+      const stale = Date.now() - lastActionRef.current < GRACE_MS;
+      if (!stale) {
+        if (s.set_temp != null) setLocalTemp(s.set_temp);
+        if (s.power != null) setLocalPower(s.power);
+      }
     } catch {
       setStatus(null);
     }
@@ -392,30 +400,44 @@ export default function App() {
   }, [loadStatus, loadSchedules, loadPaused]);
 
   const togglePower = async (next) => {
+    lastActionRef.current = Date.now();
     setLocalPower(next);
     try {
       await api("/api/control", {
         method: "POST",
         body: JSON.stringify({ power: next ? "1" : "0" }),
       });
-      await loadStatus();
     } catch {
       // keep local state
     }
   };
 
-  const changeTemperature = async (temperature) => {
+  const tempDebounceRef = useRef(null);
+  const needsPowerOnRef = useRef(false);
+
+  const changeTemperature = (temperature) => {
+    lastActionRef.current = Date.now();
     setLocalTemp(temperature);
-    try {
-      const body = localPower ? { temperature } : { power: "1", temperature };
-      await api("/api/control", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      await loadStatus();
-    } catch {
-      // keep local state
+    if (!localPower) {
+      setLocalPower(true);
+      needsPowerOnRef.current = true;
     }
+
+    clearTimeout(tempDebounceRef.current);
+    tempDebounceRef.current = setTimeout(async () => {
+      try {
+        const body = needsPowerOnRef.current
+          ? { power: "1", temperature }
+          : { temperature };
+        needsPowerOnRef.current = false;
+        await api("/api/control", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+      } catch {
+        // keep local state
+      }
+    }, 300);
   };
 
   const togglePause = async (next) => {
