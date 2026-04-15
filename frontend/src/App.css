@@ -73,7 +73,10 @@ input {
   /* Clip here, outside the preserve-3d chain, so it doesn't break
      backface-visibility on iOS Safari */
   overflow: hidden;
-  @media (min-width: 600px) {
+}
+
+@media (min-width: 600px) {
+  .app {
     width: 400px;
     min-height: 560px;
     max-height: 90dvh;
@@ -98,8 +101,8 @@ input {
   min-height: 100dvh;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
-  -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   @media (min-width: 600px) {
     min-height: 560px;
     max-height: 90dvh;
@@ -138,7 +141,9 @@ input {
       inset: 6px;
       background: transparent;
       border-radius: 38px;
-      box-shadow: 2px 2px 2px 0 rgba(255, 255, 255, 0.7), -1px -1px 1px 0 rgba(0, 0, 0, 0.05);
+      box-shadow:
+        2px 2px 2px 0 rgba(255, 255, 255, 0.7),
+        -1px -1px 1px 0 rgba(0, 0, 0, 0.05);
       pointer-events: none;
     }
     &::before {
@@ -516,4 +521,3 @@ input {
   cursor: pointer;
   font-size: var(--font-size-md);
 }
-
