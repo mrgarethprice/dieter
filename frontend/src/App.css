@@ -10,6 +10,7 @@
 
 :root {
   --neu-surface: #f7f7f7;
+  --neu-surface-shade: #ededed;
   --neu-canvas: #e0e0e0;
   --neu-accent: #f9601b;
   --neu-accent-light: #ff8a50;
@@ -32,6 +33,10 @@
 
 html {
   background: var(--neu-surface);
+}
+
+html * {
+  outline-color: var(--neu-accent);
 }
 
 body {
@@ -60,18 +65,29 @@ input {
 /* ── App shell ─────────────────────────────────────────────────────────────── */
 
 .app {
-  display: flex;
-  flex-direction: column;
   min-height: 100dvh;
   margin: 0 auto;
-  background: var(--neu-surface);
   position: relative;
-  overflow: hidden;
+  perspective: 1200px;
   @media (min-width: 600px) {
     width: 400px;
     min-height: 560px;
     max-height: 90dvh;
     margin: 0 auto;
+  }
+}
+
+/* ── Card flip ─────────────────────────────────────────────────────────────── */
+
+.card-flipper {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  @media (min-width: 600px) {
+    min-height: 560px;
+    max-height: 90dvh;
     border-radius: 40px;
     box-shadow:
       0 60px 80px 0 rgba(0, 0, 0, 0.07),
@@ -80,7 +96,54 @@ input {
       0 7.513px 10.017px 0 rgba(0, 0, 0, 0.04),
       0 3.99px 5.32px 0 rgba(0, 0, 0, 0.03),
       0 1.66px 2.214px 0 rgba(0, 0, 0, 0.02);
+
   }
+}
+
+.card-flipper--flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--neu-surface);
+  overflow: hidden;
+  @media (min-width: 600px) {
+    border-radius: 40px;
+  }
+}
+
+.card-face--front {
+  @media (min-width: 600px) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      background: transparent;
+      border-radius: 38px;
+      box-shadow: 2px 2px 2px 0 rgba(255, 255, 255, 0.7), -1px -1px 1px 0 rgba(0, 0, 0, 0.05);
+      pointer-events: none;
+    }
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      border-radius: 40px;
+      box-shadow: -0.5px -2px 1px 0 rgba(0, 0, 0, 0.2) inset;
+      z-index: 2;
+      pointer-events: none;
+    }
+  }
+}
+
+.card-face--back {
+  transform: rotateY(180deg);
 }
 
 /* ── Home screen ───────────────────────────────────────────────────────────── */
@@ -158,6 +221,7 @@ input {
   font-size: var(--font-size-md);
   color: var(--neu-text-muted);
   margin-top: 8px;
+  margin-left: 6px;
   font-weight: 400;
 }
 
@@ -287,6 +351,11 @@ input {
   justify-content: flex-end;
   max-width: 480px;
   margin: 0 auto;
+  @media (min-width: 600px) {
+    position: absolute;
+    max-width: none;
+    margin: 0;
+  }
 }
 
 .edit-overlay__backdrop {
@@ -305,6 +374,19 @@ input {
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.edit-overlay--exiting .edit-overlay__backdrop {
+  animation: fadeOut 0.18s ease forwards;
+}
+
 /* ── Edit bottom sheet ─────────────────────────────────────────────────────── */
 
 .edit-sheet {
@@ -316,6 +398,19 @@ input {
   max-height: 70dvh;
   overflow-y: auto;
   animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.edit-overlay--exiting .edit-sheet {
+  animation: slideDown 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
 }
 
 @keyframes slideUp {
@@ -330,6 +425,7 @@ input {
 .edit-sheet__header {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -337,14 +433,20 @@ input {
 .edit-sheet__time {
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
-  font-weight: 500;
   color: var(--neu-text);
+  background-color: var(--neu-surface-shade);
+  height: 40px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
 }
 
 .edit-sheet__temp {
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
-  font-weight: 400;
+  font-weight: 500;
   color: var(--neu-text);
 }
 
@@ -352,7 +454,7 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 48px;
   padding: 8px 0 24px;
 }
 
@@ -375,7 +477,9 @@ input {
 
 .time-input-wrapper {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .time-input-wrapper input[type="time"] {
@@ -388,17 +492,3 @@ input {
   font-size: var(--font-size-md);
 }
 
-/* ── Utility ───────────────────────────────────────────────────────────────── */
-
-.screen-transition {
-  animation: screenFade 0.2s ease;
-}
-
-@keyframes screenFade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}

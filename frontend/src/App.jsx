@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import ModeDial from "./components/ModeDial";
 import NeuSlider from "./components/NeuSlider";
 import NeuSwitch from "./components/NeuSwitch";
@@ -102,7 +102,7 @@ function HomeScreen({
   onOpenSchedule,
 }) {
   return (
-    <div className={`home screen-transition ${!isOn ? "home--off" : ""}`}>
+    <div className={`home ${!isOn ? "home--off" : ""}`}>
       <button
         className={`home__next-schedule ${!isOn ? "home__next-schedule--off" : ""}`}
         onClick={onOpenSchedule}
@@ -148,6 +148,90 @@ function HomeScreen({
   );
 }
 
+// ── Schedule List (with FLIP reorder animation) ───────────────────────────────
+
+function ScheduleList({ schedules, onEditItem }) {
+  const itemRefs = useRef({});
+  const prevPositionsRef = useRef({});
+  const isFirstRender = useRef(true);
+
+  useLayoutEffect(() => {
+    const newPositions = {};
+    schedules.forEach((s) => {
+      const el = itemRefs.current[s.id];
+      if (el) newPositions[s.id] = el.getBoundingClientRect().top;
+    });
+
+    if (!isFirstRender.current) {
+      schedules.forEach((s) => {
+        const el = itemRefs.current[s.id];
+        if (!el) return;
+        const oldTop = prevPositionsRef.current[s.id];
+        const newTop = newPositions[s.id];
+
+        if (oldTop === undefined) {
+          // New item — slide + fade in
+          el.animate(
+            [
+              { opacity: "0", transform: "translateY(20px)" },
+              { opacity: "1", transform: "translateY(0)" },
+            ],
+            {
+              duration: 320,
+              easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+              fill: "backwards",
+            },
+          );
+        } else {
+          const dy = oldTop - newTop;
+          if (Math.abs(dy) > 1) {
+            // Existing item moved — FLIP to new position
+            el.animate(
+              [
+                { transform: `translateY(${dy}px)` },
+                { transform: "translateY(0)" },
+              ],
+              { duration: 300, easing: "cubic-bezier(0.4, 0, 0.2, 1)" },
+            );
+          }
+        }
+      });
+    }
+
+    prevPositionsRef.current = newPositions;
+    isFirstRender.current = false;
+  });
+
+  return (
+    <>
+      {schedules.map((s) => (
+        <div
+          key={s.id}
+          ref={(el) => {
+            itemRefs.current[s.id] = el;
+          }}
+          className="schedule-item"
+          onClick={() => onEditItem(s)}
+        >
+          <div className="schedule-item__left">
+            <span className="schedule-item__icon">
+              {s.action === "off" ? (
+                <i className="ri-shut-down-line" />
+              ) : (
+                <i className={getModeIcon(s.mode)} />
+              )}
+            </span>
+            <span className="schedule-item__time">{formatTime12(s.time)}</span>
+          </div>
+          {s.action === "setpoint" && s.temperature != null && (
+            <span className="schedule-item__temp">{s.temperature}°</span>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 // ── Schedule Screen ──────────────────────────────────────────────────────────
 
 function ScheduleScreen({
@@ -159,31 +243,9 @@ function ScheduleScreen({
   onTogglePause,
 }) {
   return (
-    <div className="schedule-screen screen-transition">
+    <div className="schedule-screen">
       <div className="schedule-list">
-        {schedules.map((s) => (
-          <div
-            key={s.id}
-            className="schedule-item"
-            onClick={() => onEditItem(s)}
-          >
-            <div className="schedule-item__left">
-              <span className="schedule-item__icon">
-                {s.action === "off" ? (
-                  <i className="ri-shut-down-line" />
-                ) : (
-                  <i className={getModeIcon(s.mode)} />
-                )}
-              </span>
-              <span className="schedule-item__time">
-                {formatTime12(s.time)}
-              </span>
-            </div>
-            {s.action === "setpoint" && s.temperature != null && (
-              <span className="schedule-item__temp">{s.temperature}°</span>
-            )}
-          </div>
-        ))}
+        <ScheduleList schedules={schedules} onEditItem={onEditItem} />
         <ActionButton
           className="schedule-add"
           variant="primary"
@@ -220,31 +282,39 @@ function EditModal({ item, onSave, onCancel }) {
   const [time, setTime] = useState(item?.time || "16:00");
   const [temp, setTemp] = useState(item?.temperature ?? 22);
   const [mode, setMode] = useState(item?.mode || "cool");
+  const [exiting, setExiting] = useState(false);
+
+  const dismiss = (callback) => {
+    setExiting(true);
+    setTimeout(callback, 200);
+  };
 
   const handleSave = () => {
-    onSave({
-      ...(item || {}),
-      time,
-      temperature: temp,
-      mode,
-      action: "setpoint",
-      enabled: true,
-    });
+    dismiss(() =>
+      onSave({
+        ...(item || {}),
+        time,
+        temperature: temp,
+        mode,
+        action: "setpoint",
+        enabled: true,
+      })
+    );
   };
 
   return (
-    <div className="edit-overlay">
-      <div className="edit-overlay__backdrop" onClick={onCancel} />
+    <div className={`edit-overlay${exiting ? " edit-overlay--exiting" : ""}`}>
+      <div className="edit-overlay__backdrop" onClick={() => dismiss(onCancel)} />
       <div className="edit-sheet">
         <div className="edit-sheet__header">
-          <div className="time-input-wrapper">
+          <label className="time-input-wrapper">
             <span className="edit-sheet__time">{formatTime12(time)}</span>
             <input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
             />
-          </div>
+          </label>
           <span className="edit-sheet__temp">{temp}°</span>
         </div>
 
@@ -266,7 +336,7 @@ function EditModal({ item, onSave, onCancel }) {
           <ActionButton
             className="edit-sheet__cancel"
             variant="secondary"
-            onClick={onCancel}
+            onClick={() => dismiss(onCancel)}
           >
             Cancel
           </ActionButton>
@@ -309,7 +379,8 @@ export default function App() {
   const loadSchedules = useCallback(async () => {
     try {
       const data = await api("/api/schedules");
-      if (data?.length) setSchedules(data);
+      if (data?.length)
+        setSchedules([...data].sort((a, b) => a.time.localeCompare(b.time)));
     } catch {
       // keep mock data
     }
@@ -349,10 +420,13 @@ export default function App() {
     }
   };
 
+  const sortByTime = (arr) =>
+    [...arr].sort((a, b) => a.time.localeCompare(b.time));
+
   const saveScheduleItem = async (form) => {
     if (form.id) {
       setSchedules((prev) =>
-        prev.map((s) => (s.id === form.id ? { ...s, ...form } : s)),
+        sortByTime(prev.map((s) => (s.id === form.id ? { ...s, ...form } : s))),
       );
       try {
         await api(`/api/schedules/${form.id}`, {
@@ -365,7 +439,7 @@ export default function App() {
       }
     } else {
       const newItem = { ...form, id: Date.now() };
-      setSchedules((prev) => [...prev, newItem]);
+      setSchedules((prev) => sortByTime([...prev, newItem]));
       try {
         await api("/api/schedules", {
           method: "POST",
@@ -384,39 +458,41 @@ export default function App() {
   const setTemp = status?.set_temp ?? localTemp;
   const isOn = status?.power ?? localPower;
 
+  const flipped = screen === "schedule";
+
   return (
     <div className="app">
-      {screen === "home" && (
-        <HomeScreen
-          status={status}
-          setTemp={setTemp}
-          roomTemp={roomTemp}
-          isOn={isOn}
-          onTogglePower={togglePower}
-          onTempChange={changeTemperature}
-          nextSchedule={nextSchedule}
-          onOpenSchedule={() => setScreen("schedule")}
-        />
-      )}
-
-      {screen === "schedule" && (
-        <ScheduleScreen
-          schedules={schedules}
-          onDone={() => setScreen("home")}
-          onEditItem={(item) => setEditItem(item)}
-          onAddItem={() => setEditItem("new")}
-          paused={paused}
-          onTogglePause={setPaused}
-        />
-      )}
-
-      {editItem && (
-        <EditModal
-          item={editItem === "new" ? null : editItem}
-          onSave={saveScheduleItem}
-          onCancel={() => setEditItem(null)}
-        />
-      )}
+      <div className={`card-flipper${flipped ? " card-flipper--flipped" : ""}`}>
+        <div className="card-face card-face--front">
+          <HomeScreen
+            status={status}
+            setTemp={setTemp}
+            roomTemp={roomTemp}
+            isOn={isOn}
+            onTogglePower={togglePower}
+            onTempChange={changeTemperature}
+            nextSchedule={nextSchedule}
+            onOpenSchedule={() => setScreen("schedule")}
+          />
+        </div>
+        <div className="card-face card-face--back">
+          <ScheduleScreen
+            schedules={schedules}
+            onDone={() => setScreen("home")}
+            onEditItem={(item) => setEditItem(item)}
+            onAddItem={() => setEditItem("new")}
+            paused={paused}
+            onTogglePause={setPaused}
+          />
+          {editItem && (
+            <EditModal
+              item={editItem === "new" ? null : editItem}
+              onSave={saveScheduleItem}
+              onCancel={() => setEditItem(null)}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
