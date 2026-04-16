@@ -352,6 +352,7 @@ export default function App() {
 
   const [localTemp, setLocalTemp] = useState(24);
   const [localPower, setLocalPower] = useState(true);
+  const [initialLoaded, setInitialLoaded] = useState(false);
 
   // After a user action, ignore device state echoes for a grace period so
   // optimistic UI isn't overwritten by a stale read-back from the Daikin.
@@ -369,6 +370,8 @@ export default function App() {
       }
     } catch {
       setStatus(null);
+    } finally {
+      setInitialLoaded(true);
     }
   }, []);
 
@@ -501,6 +504,10 @@ export default function App() {
   const isOn = localPower;
 
   const flipped = screen === "schedule";
+
+  if (!initialLoaded) {
+    return <div className="interstitial" />;
+  }
 
   return (
     <div className="app">
