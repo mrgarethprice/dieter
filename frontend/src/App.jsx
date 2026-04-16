@@ -506,7 +506,11 @@ export default function App() {
   const flipped = screen === "schedule";
 
   if (!initialLoaded) {
-    return <div className="interstitial" />;
+    return (
+      <div className="interstitial">
+        <div className="interstitial-spinner" />
+      </div>
+    );
   }
 
   return (

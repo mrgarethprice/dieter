@@ -67,7 +67,22 @@ input {
 .interstitial {
   position: fixed;
   inset: 0;
-  background: var(--neu-accent);
+  background: var(--neu-surface);
+  display: grid;
+  place-items: center;
+}
+
+.interstitial-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--neu-canvas);
+  border-top-color: var(--neu-idle);
+  animation: spin 1.4s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── App shell ─────────────────────────────────────────────────────────────── */
