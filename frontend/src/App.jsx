@@ -71,16 +71,32 @@ function HomeScreen({
   onTogglePower,
   onTempChange,
   nextSchedule,
+  paused,
   onOpenSchedule,
 }) {
+  let scheduleIcon, scheduleLabel;
+  if (paused) {
+    scheduleIcon = "ri-time-line";
+    scheduleLabel = "paused";
+  } else if (!nextSchedule) {
+    scheduleIcon = "ri-time-line";
+    scheduleLabel = "schedule";
+  } else {
+    scheduleIcon =
+      nextSchedule.action === "off"
+        ? "ri-shut-down-line"
+        : getModeIcon(nextSchedule.mode);
+    scheduleLabel = formatTime12(nextSchedule.time);
+  }
+
   return (
     <div className={`home ${!isOn ? "home--off" : ""}`}>
       <button
         className={`home__next-schedule ${!isOn ? "home__next-schedule--off" : ""}`}
         onClick={onOpenSchedule}
       >
-        <i className="ri-time-line" />
-        {nextSchedule ? formatTime12(nextSchedule.time) : "No schedule"}
+        <i className={scheduleIcon} />
+        {scheduleLabel}
       </button>
 
       <div className="home__body">
@@ -525,6 +541,7 @@ export default function App() {
             onTogglePower={togglePower}
             onTempChange={changeTemperature}
             nextSchedule={nextSchedule}
+            paused={paused}
             onOpenSchedule={() => setScreen("schedule")}
           />
         </div>
