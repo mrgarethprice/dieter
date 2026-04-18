@@ -289,9 +289,48 @@ input {
 
 .home__footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   padding-top: 16px;
+}
+
+.home__controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Fan speed select ──────────────────────────────────────────────────────── */
+
+.fan-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--neu-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.fan-select--accent {
+  color: var(--neu-accent);
+}
+
+.fan-select__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.fan-select select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: var(--font-size-md);
 }
 
 /* ── Schedule screen ───────────────────────────────────────────────────────── */
@@ -340,6 +379,24 @@ input {
   font-size: var(--font-size-md);
   font-weight: 400;
   color: var(--neu-text);
+}
+
+.schedule-item__fan {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--neu-text-muted);
+}
+
+.schedule-item__fan--set {
+  color: var(--neu-accent);
+}
+
+.schedule-item__fan-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .schedule-item__temp {
@@ -477,10 +534,21 @@ input {
 
 .edit-sheet__header {
   display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 24px;
+}
+
+.edit-sheet__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-sheet__header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
 }
 
 .edit-sheet__time {
@@ -516,6 +584,25 @@ input {
   align-items: center;
   justify-content: space-between;
   padding-top: 16px;
+}
+
+.edit-sheet__remove {
+  font-size: 22px;
+  color: var(--neu-text-muted);
+  padding: 8px 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+
+.edit-sheet__remove:active {
+  color: #c0392b;
+}
+
+.edit-sheet__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
 }
 
 .edit-sheet__cancel {

@@ -15,6 +15,8 @@ const MODE_ICONS = {
   auto: "ri-arrow-up-down-line",
 };
 
+const FAN_LABEL_MAP = { "1": "1", "3": "2", "5": "3", "A": "A" };
+
 function api(path, opts = {}) {
   return fetch(API + path, {
     headers: { "Content-Type": "application/json" },
@@ -61,6 +63,37 @@ function getModeIcon(mode) {
   return MODE_ICONS[mode] || "ri-fire-line";
 }
 
+// ── Fan Icon (inline SVG for currentColor inheritance) ───────────────────────
+
+function FanIcon({ className = "" }) {
+  return (
+    <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10.9121 1.48919C12.1849 1.07672 13.5503 1.04147 14.8427 1.38763L15.664 1.60833L14.4101 6.28411C15.1439 6.12076 15.9031 6.07591 16.6582 6.15716C17.9883 6.30036 19.2487 6.82532 20.2871 7.66888C21.3256 8.51263 22.0982 9.63918 22.5107 10.912C22.9232 12.1849 22.9584 13.5502 22.6123 14.8427L22.3925 15.664L17.7148 14.4101C17.8782 15.1439 17.924 15.903 17.8427 16.6581C17.6995 17.9883 17.1746 19.2486 16.331 20.287C15.4872 21.3256 14.3608 22.0982 13.0878 22.5107C11.8149 22.9232 10.4497 22.9584 9.15718 22.6122L8.21578 22.3603L8.59371 21.4618L8.59468 21.4579C8.59576 21.4554 8.59738 21.4514 8.59957 21.4462C8.60403 21.4355 8.61132 21.4194 8.62007 21.3984C8.63765 21.3561 8.66365 21.2932 8.69625 21.2138C8.76145 21.0549 8.8535 20.8281 8.96089 20.5575C9.17641 20.0146 9.45121 19.3008 9.69234 18.6074C9.81689 18.2492 9.92752 17.9086 10.0166 17.6064C9.15274 17.8572 8.24422 17.9398 7.34175 17.8427C6.01158 17.6995 4.75122 17.1746 3.71285 16.331C2.67431 15.4872 1.90172 14.3608 1.48921 13.0878C1.07672 11.8149 1.04145 10.4497 1.38765 9.15716L1.60836 8.33587L6.28414 9.5888C6.12099 8.85538 6.07598 8.09638 6.15718 7.34173C6.30042 6.01158 6.82533 4.75119 7.6689 3.71282C8.51267 2.67432 9.63918 1.90171 10.9121 1.48919ZM13.5625 2.87884C12.8485 2.80846 12.1247 2.88338 11.4365 3.10638C10.4757 3.41772 9.62511 4.00124 8.98824 4.78509C8.35159 5.56885 7.95565 6.52038 7.84761 7.52435C7.75335 8.40063 7.88164 9.28478 8.21871 10.0947C8.53335 10.8513 7.87297 11.7744 6.96871 11.5322L2.87886 10.4365C2.80829 11.1507 2.88332 11.8749 3.1064 12.5634C3.41775 13.5242 4.00126 14.3748 4.78511 15.0117C5.56889 15.6483 6.52036 16.0442 7.52437 16.1523C8.52842 16.2603 9.54201 16.0755 10.4433 15.62C10.5888 15.5465 10.9086 15.4196 11.2763 15.5546C11.677 15.7019 11.8302 16.042 11.8828 16.2255C11.9359 16.4111 11.9377 16.5936 11.9316 16.7226C11.9249 16.863 11.9044 17.0093 11.8789 17.1513C11.7792 17.7053 11.5453 18.4541 11.2978 19.1659C11.0536 19.8681 10.7783 20.582 10.5615 21.1298C11.2351 21.1801 11.915 21.1036 12.5634 20.8935C13.5242 20.5822 14.3748 19.9995 15.0117 19.2158C15.6485 18.4319 16.0442 17.4797 16.1523 16.4755C16.2465 15.5994 16.1182 14.7159 15.7812 13.9062C15.486 13.1969 16.0478 12.3403 16.8642 12.4355L17.0312 12.4677L21.1201 13.5624C21.1905 12.8485 21.1165 12.1247 20.8935 11.4365C20.5822 10.4757 19.9996 9.62508 19.2158 8.98821C18.4319 8.35135 17.4797 7.95565 16.4755 7.84759C15.5995 7.75338 14.7159 7.88176 13.9062 8.21868C13.1495 8.53361 12.2254 7.87306 12.4677 6.96868L13.5625 2.87884ZM11.1503 12.0097V11.9999C11.1504 11.5306 11.5306 11.1504 12 11.1503C12.4694 11.1503 12.8495 11.5305 12.8496 11.9999V12.0097C12.8496 12.4791 12.4694 12.8603 12 12.8603C11.5598 12.8602 11.1976 12.5254 11.1543 12.0966L11.1503 12.0097Z" />
+    </svg>
+  );
+}
+
+// ── Fan Speed Select ─────────────────────────────────────────────────────────
+
+function FanSelect({ value, speeds, onChange, className = "", accent = false }) {
+  if (!speeds?.length) return null;
+  const display = FAN_LABEL_MAP[value] ?? value;
+  return (
+    <label className={`fan-select ${accent ? "fan-select--accent" : ""} ${className}`.trim()}>
+      <FanIcon className="fan-select__icon" />
+      <span className="fan-select__value">{display}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {speeds.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 // ── Home Screen ──────────────────────────────────────────────────────────────
 
 function HomeScreen({
@@ -73,6 +106,9 @@ function HomeScreen({
   nextSchedule,
   paused,
   onOpenSchedule,
+  fanSpeed,
+  fanSpeeds,
+  onFanChange,
 }) {
   let scheduleIcon, scheduleLabel;
   if (paused) {
@@ -125,6 +161,16 @@ function HomeScreen({
       </div>
 
       <div className="home__footer">
+        {isOn && fanSpeeds?.length > 0 && (
+          <div className="home__controls">
+            <FanSelect
+              value={fanSpeed}
+              speeds={fanSpeeds}
+              onChange={onFanChange}
+              accent
+            />
+          </div>
+        )}
         <NeuSwitch
           checked={isOn}
           onChange={onTogglePower}
@@ -138,7 +184,7 @@ function HomeScreen({
 
 // ── Schedule List (with FLIP reorder animation) ───────────────────────────────
 
-function ScheduleList({ schedules, onEditItem }) {
+function ScheduleList({ schedules, onEditItem, fanSpeeds }) {
   const itemRefs = useRef({});
   const prevPositionsRef = useRef({});
   const isFirstRender = useRef(true);
@@ -209,6 +255,12 @@ function ScheduleList({ schedules, onEditItem }) {
                 <i className={getModeIcon(s.mode)} />
               )}
             </span>
+            {fanSpeeds?.length > 0 && s.action !== "off" && (
+              <span className={`schedule-item__fan ${s.fan ? "schedule-item__fan--set" : ""}`}>
+                <FanIcon className="schedule-item__fan-icon" />
+                {FAN_LABEL_MAP[s.fan] ?? FAN_LABEL_MAP["A"]}
+              </span>
+            )}
             <span className="schedule-item__time">{formatTime12(s.time)}</span>
           </div>
           {s.action === "setpoint" && s.temperature != null && (
@@ -229,11 +281,12 @@ function ScheduleScreen({
   onAddItem,
   paused,
   onTogglePause,
+  fanSpeeds,
 }) {
   return (
     <div className="schedule-screen">
       <div className="schedule-list">
-        <ScheduleList schedules={schedules} onEditItem={onEditItem} />
+        <ScheduleList schedules={schedules} onEditItem={onEditItem} fanSpeeds={fanSpeeds} />
         <ActionButton
           className="schedule-add"
           variant="primary"
@@ -266,13 +319,13 @@ function ScheduleScreen({
 
 // ── Edit / Add Modal ─────────────────────────────────────────────────────────
 
-function EditModal({ item, onSave, onCancel, onRemove }) {
-  // "power" slot on the dial represents action:"off"; all other slots are modes
+function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds }) {
   const [time, setTime] = useState(item?.time || "16:00");
   const [temp, setTemp] = useState(item?.temperature ?? 22);
   const [dialValue, setDialValue] = useState(
     item?.action === "off" ? "power" : (item?.mode || "cool"),
   );
+  const [fan, setFan] = useState(item?.fan || null);
   const [exiting, setExiting] = useState(false);
 
   const isOff = dialValue === "power";
@@ -291,6 +344,7 @@ function EditModal({ item, onSave, onCancel, onRemove }) {
         temperature: tempDisabled ? null : temp,
         mode: isOff ? null : dialValue,
         action: isOff ? "off" : "setpoint",
+        fan: isOff ? null : fan,
         enabled: true,
       })
     );
@@ -301,15 +355,27 @@ function EditModal({ item, onSave, onCancel, onRemove }) {
       <div className="edit-overlay__backdrop" onClick={() => dismiss(onCancel)} />
       <div className="edit-sheet">
         <div className="edit-sheet__header">
-          <label className="time-input-wrapper">
-            <span className="edit-sheet__time">{formatTime12(time)}</span>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
-          </label>
-          {!tempDisabled && <span className="edit-sheet__temp">{temp}°</span>}
+          <div className="edit-sheet__header-left">
+            {!isOff && fanSpeeds?.length > 0 && (
+              <FanSelect
+                value={fan ?? fanSpeeds[fanSpeeds.length - 1]?.value}
+                speeds={fanSpeeds}
+                onChange={setFan}
+                accent={!!fan}
+              />
+            )}
+          </div>
+          <div className="edit-sheet__header-right">
+            <label className="time-input-wrapper">
+              <span className="edit-sheet__time">{formatTime12(time)}</span>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+            </label>
+            {!tempDisabled && <span className="edit-sheet__temp">{temp}°</span>}
+          </div>
         </div>
 
         <div className="edit-sheet__body">
@@ -328,29 +394,31 @@ function EditModal({ item, onSave, onCancel, onRemove }) {
         </div>
 
         <div className="edit-sheet__footer">
-          <ActionButton
-            className="edit-sheet__cancel"
-            variant="secondary"
-            onClick={() => dismiss(onCancel)}
-          >
-            Cancel
-          </ActionButton>
           {item?.id && (
-            <ActionButton
+            <button
               className="edit-sheet__remove"
-              variant="danger"
               onClick={() => dismiss(onRemove)}
+              aria-label="Remove"
             >
-              Remove
-            </ActionButton>
+              <i className="ri-delete-bin-line" />
+            </button>
           )}
-          <ActionButton
-            className="edit-sheet__save"
-            variant="primary"
-            onClick={handleSave}
-          >
-            Done
-          </ActionButton>
+          <div className="edit-sheet__actions">
+            <ActionButton
+              className="edit-sheet__cancel"
+              variant="secondary"
+              onClick={() => dismiss(onCancel)}
+            >
+              Cancel
+            </ActionButton>
+            <ActionButton
+              className="edit-sheet__save"
+              variant="primary"
+              onClick={handleSave}
+            >
+              Done
+            </ActionButton>
+          </div>
         </div>
       </div>
     </div>
@@ -368,6 +436,8 @@ export default function App() {
 
   const [localTemp, setLocalTemp] = useState(24);
   const [localPower, setLocalPower] = useState(true);
+  const [localFan, setLocalFan] = useState("A");
+  const [fanSpeeds, setFanSpeeds] = useState([]);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   // After a user action, ignore device state echoes for a grace period so
@@ -383,6 +453,7 @@ export default function App() {
       if (!stale) {
         if (s.set_temp != null) setLocalTemp(s.set_temp);
         if (s.power != null) setLocalPower(s.power);
+        if (s.fan != null) setLocalFan(s.fan);
       }
     } catch {
       setStatus(null);
@@ -401,6 +472,15 @@ export default function App() {
     }
   }, []);
 
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const data = await api("/api/capabilities");
+      if (data?.fan_speeds) setFanSpeeds(data.fan_speeds);
+    } catch {
+      // keep empty
+    }
+  }, []);
+
   const loadPaused = useCallback(async () => {
     try {
       const data = await api("/api/scheduler");
@@ -414,9 +494,10 @@ export default function App() {
     loadStatus();
     loadSchedules();
     loadPaused();
+    loadCapabilities();
     const t = setInterval(loadStatus, 30_000);
     return () => clearInterval(t);
-  }, [loadStatus, loadSchedules, loadPaused]);
+  }, [loadStatus, loadSchedules, loadPaused, loadCapabilities]);
 
   const togglePower = async (next) => {
     lastActionRef.current = Date.now();
@@ -457,6 +538,19 @@ export default function App() {
         // keep local state
       }
     }, 300);
+  };
+
+  const changeFanSpeed = async (fan) => {
+    lastActionRef.current = Date.now();
+    setLocalFan(fan);
+    try {
+      await api("/api/control", {
+        method: "POST",
+        body: JSON.stringify({ fan }),
+      });
+    } catch {
+      // keep local state
+    }
   };
 
   const togglePause = async (next) => {
@@ -543,6 +637,9 @@ export default function App() {
             nextSchedule={nextSchedule}
             paused={paused}
             onOpenSchedule={() => setScreen("schedule")}
+            fanSpeed={localFan}
+            fanSpeeds={fanSpeeds}
+            onFanChange={changeFanSpeed}
           />
         </div>
         <div className="card-face card-face--back">
@@ -553,6 +650,7 @@ export default function App() {
             onAddItem={() => setEditItem("new")}
             paused={paused}
             onTogglePause={togglePause}
+            fanSpeeds={fanSpeeds}
           />
           {editItem && (
             <EditModal
@@ -560,6 +658,7 @@ export default function App() {
               onSave={saveScheduleItem}
               onCancel={() => setEditItem(null)}
               onRemove={editItem !== "new" ? () => removeScheduleItem(editItem.id) : undefined}
+              fanSpeeds={fanSpeeds}
             />
           )}
         </div>

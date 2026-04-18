@@ -83,6 +83,7 @@ async def _apply(schedule: dict) -> None:
                 power="1",
                 mode=schedule["mode"],
                 temp=schedule["temperature"],
+                fan=schedule.get("fan"),
             )
     except Exception as exc:
         log.error("Failed to apply schedule %s: %s", schedule["id"], exc)

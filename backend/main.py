@@ -53,6 +53,7 @@ class ScheduleIn(BaseModel):
     action:      str   = "setpoint"  # "setpoint" | "off"
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
     mode:        Optional[str]   = "heat"
+    fan:         Optional[str]   = None
     enabled:     bool  = True
 
     def validate_fields(self):
@@ -69,6 +70,7 @@ class SchedulePatch(BaseModel):
     action:      Optional[str]   = None
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
     mode:        Optional[str]   = None
+    fan:         Optional[str]   = None
     enabled:     Optional[bool]  = None
 
 
@@ -76,6 +78,7 @@ class ControlIn(BaseModel):
     power:       Optional[str]   = None   # "0" | "1"
     mode:        Optional[str]   = None
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
+    fan:         Optional[str]   = None
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -85,6 +88,14 @@ async def get_status():
     return await daikin.status()
 
 
+@app.get("/api/capabilities")
+async def get_capabilities():
+    try:
+        return await daikin.fan_capabilities()
+    except Exception as exc:
+        raise HTTPException(502, f"Daikin unreachable: {exc}")
+
+
 @app.post("/api/control")
 async def set_control(body: ControlIn):
     try:
@@ -92,6 +103,7 @@ async def set_control(body: ControlIn):
             power=body.power,
             mode=body.mode,
             temp=body.temperature,
+            fan=body.fan,
         )
         return {"ok": result.get("ret") == "OK", "raw": result}
     except Exception as exc:
@@ -108,6 +120,7 @@ def create_schedule(body: ScheduleIn):
     body.validate_fields()
     new_id = database.create(
         body.time, body.temperature, body.mode, body.action, body.enabled,
+        fan=body.fan,
     )
     sched.reload_jobs()
     return {"id": new_id, **database.get_one(new_id)}
@@ -131,6 +144,7 @@ def update_schedule(schedule_id: int, body: SchedulePatch):
         if action == "off":
             updates["temperature"] = None
             updates["mode"] = None
+            updates["fan"] = None
         database.update(schedule_id, **updates)
         sched.reload_jobs()
     return database.get_one(schedule_id)

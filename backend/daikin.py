@@ -30,6 +30,11 @@ class DaikinAirbase:
                 result[k.strip()] = v.strip()
         return result
 
+    async def get_model_info(self) -> dict:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{self.base}/aircon/get_model_info", timeout=5)
+            return self._parse(r.text)
+
     async def get_control_info(self) -> dict:
         async with httpx.AsyncClient() as client:
             r = await client.get(f"{self.base}/aircon/get_control_info", timeout=5)
@@ -97,6 +102,30 @@ class DaikinAirbase:
         except Exception as exc:
             log.error("Daikin unreachable: %s", exc)
             return {"connected": False, "error": str(exc)}
+
+
+    async def fan_capabilities(self) -> dict:
+        """Build the available fan speed list from hardware discovery."""
+        model = await self.get_model_info()
+        steps = int(model.get("en_frate", "0"))
+        auto = model.get("en_frate_auto") == "1"
+
+        AIRBASE_SPEEDS = [
+            {"value": "1", "label": "Low"},
+            {"value": "3", "label": "Mid"},
+            {"value": "5", "label": "High"},
+        ]
+        if steps == 2:
+            speeds = [AIRBASE_SPEEDS[0], AIRBASE_SPEEDS[2]]  # Low, High
+        elif steps >= 3:
+            speeds = list(AIRBASE_SPEEDS)                     # Low, Mid, High
+        else:
+            speeds = []
+
+        if auto:
+            speeds.append({"value": "A", "label": "Auto"})
+
+        return {"fan_speeds": speeds}
 
 
 def _safe_float(val):
