@@ -289,8 +289,9 @@ input {
 
 .home__footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  gap: 16px;
   padding-top: 16px;
 }
 
@@ -298,6 +299,7 @@ input {
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-right: auto;
 }
 
 /* ── Fan speed select ──────────────────────────────────────────────────────── */
