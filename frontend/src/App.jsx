@@ -17,6 +17,13 @@ const MODE_ICONS = {
 
 const FAN_LABEL_MAP = { "1": "1", "3": "2", "5": "3", "A": "A" };
 
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function toTitleCase(s) {
+  return s.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
+}
+
 function api(path, opts = {}) {
   return fetch(API + path, {
     headers: { "Content-Type": "application/json" },
@@ -122,10 +129,43 @@ function ZoneSelect({ zones, zoneInfo, onChange, className = "", accent = false,
     }
   };
 
+  const handleNativeChange = (e) => {
+    const selected = new Set(Array.from(e.target.selectedOptions, (o) => Number(o.value)));
+    const next = Array(8).fill(0);
+    for (let i = 0; i < count; i++) next[i] = selected.has(i) ? 1 : 0;
+    if (isAllZones(next, count)) {
+      onChange(null);
+    } else {
+      onChange(next);
+    }
+  };
+
   const panelClass = `zone-select__panel zone-select__panel--${direction}`;
+  const wrapClass = `zone-select ${accent ? "zone-select--accent" : ""} ${className}`.trim();
+
+  if (IS_IOS) {
+    const selectedIndices = [];
+    for (let i = 0; i < count; i++) if (current[i]) selectedIndices.push(i);
+
+    return (
+      <label className={wrapClass}>
+        <i className="ri-layout-grid-line" />
+        <select
+          multiple
+          value={selectedIndices.map(String)}
+          onChange={handleNativeChange}
+          className="zone-select__native"
+        >
+          {names.slice(0, count).map((name, i) => (
+            <option key={i} value={i}>{toTitleCase(name)}</option>
+          ))}
+        </select>
+      </label>
+    );
+  }
 
   return (
-    <div className={`zone-select ${accent ? "zone-select--accent" : ""} ${className}`.trim()}>
+    <div className={wrapClass}>
       <button
         type="button"
         className="zone-select__trigger"
@@ -144,7 +184,7 @@ function ZoneSelect({ zones, zoneInfo, onChange, className = "", accent = false,
                 className={`zone-select__option ${current[i] ? "zone-select__option--on" : ""}`}
                 onClick={() => toggle(i)}
               >
-                {name}
+                {toTitleCase(name)}
               </button>
             ))}
           </div>
