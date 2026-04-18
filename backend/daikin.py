@@ -4,6 +4,7 @@ All communication is on your local network — no cloud dependency.
 """
 import httpx
 import logging
+from urllib.parse import unquote
 
 log = logging.getLogger(__name__)
 
@@ -30,10 +31,49 @@ class DaikinAirbase:
                 result[k.strip()] = v.strip()
         return result
 
+    async def get_basic_info(self) -> dict:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{self.base}/common/basic_info", timeout=5)
+            return self._parse(r.text)
+
     async def get_model_info(self) -> dict:
         async with httpx.AsyncClient() as client:
             r = await client.get(f"{self.base}/aircon/get_model_info", timeout=5)
             return self._parse(r.text)
+
+    async def get_zone_setting(self) -> dict:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{self.base}/aircon/get_zone_setting", timeout=5)
+            return self._parse(r.text)
+
+    async def set_zone_setting(self, zone_onoff: list[int]) -> dict:
+        """
+        Set zone on/off state. Always sends all 8 slots.
+        Zone names are echoed back unchanged from get_zone_setting.
+        URL is built manually to avoid double-encoding the percent-hex values.
+        """
+        current = await self.get_zone_setting()
+        zone_name = current.get("zone_name", "")
+
+        full = list(zone_onoff)
+        while len(full) < 8:
+            full.append(0)
+        full = full[:8]
+
+        onoff_str = "%3b".join(str(x) for x in full)
+        url = (
+            f"{self.base}/aircon/set_zone_setting"
+            f"?zone_name={zone_name}&zone_onoff={onoff_str}"
+        )
+
+        log.info("Setting zones: %s", full)
+
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, timeout=5)
+            result = self._parse(r.text)
+            if result.get("ret") != "OK":
+                log.error("Zone set returned non-OK: %s", result)
+            return result
 
     async def get_control_info(self) -> dict:
         async with httpx.AsyncClient() as client:
@@ -90,7 +130,7 @@ class DaikinAirbase:
         try:
             control = await self.get_control_info()
             sensor  = await self.get_sensor_info()
-            return {
+            result = {
                 "connected":    True,
                 "power":        control.get("pow") == "1",
                 "mode":         CODE_TO_MODE.get(control.get("mode", ""), "unknown"),
@@ -99,14 +139,23 @@ class DaikinAirbase:
                 "outdoor_temp": _safe_float(sensor.get("otemp")),
                 "fan":          control.get("f_rate", "A"),
             }
+            try:
+                zs = await self.get_zone_setting()
+                raw = unquote(zs.get("zone_onoff", ""))
+                result["zones"] = [int(x) for x in raw.split(";") if x]
+            except Exception:
+                pass
+            return result
         except Exception as exc:
             log.error("Daikin unreachable: %s", exc)
             return {"connected": False, "error": str(exc)}
 
 
-    async def fan_capabilities(self) -> dict:
-        """Build the available fan speed list from hardware discovery."""
+    async def capabilities(self) -> dict:
+        """Discover fan speeds and zone configuration from hardware."""
         model = await self.get_model_info()
+
+        # ── Fan speeds ──
         steps = int(model.get("en_frate", "0"))
         auto = model.get("en_frate_auto") == "1"
 
@@ -116,16 +165,35 @@ class DaikinAirbase:
             {"value": "5", "label": "High"},
         ]
         if steps == 2:
-            speeds = [AIRBASE_SPEEDS[0], AIRBASE_SPEEDS[2]]  # Low, High
+            speeds = [AIRBASE_SPEEDS[0], AIRBASE_SPEEDS[2]]
         elif steps >= 3:
-            speeds = list(AIRBASE_SPEEDS)                     # Low, Mid, High
+            speeds = list(AIRBASE_SPEEDS)
         else:
             speeds = []
-
         if auto:
             speeds.append({"value": "A", "label": "Auto"})
 
-        return {"fan_speeds": speeds}
+        # ── Zones ──
+        zone_info = None
+        try:
+            basic = await self.get_basic_info()
+            if basic.get("en_setzone") == "1":
+                zone_count = int(model.get("en_zone", "0"))
+                if zone_count > 0:
+                    zs = await self.get_zone_setting()
+                    names_raw = unquote(zs.get("zone_name", ""))
+                    names = names_raw.split(";")[:zone_count]
+                    onoff_raw = unquote(zs.get("zone_onoff", ""))
+                    onoff = [int(x) for x in onoff_raw.split(";") if x][:zone_count]
+                    zone_info = {
+                        "count": zone_count,
+                        "names": names,
+                        "onoff": onoff,
+                    }
+        except Exception as exc:
+            log.warning("Zone discovery failed: %s", exc)
+
+        return {"fan_speeds": speeds, "zones": zone_info}
 
 
 def _safe_float(val):

@@ -2,6 +2,7 @@
 daikin-scheduler — FastAPI backend
 """
 import os
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -54,6 +55,7 @@ class ScheduleIn(BaseModel):
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
     mode:        Optional[str]   = "heat"
     fan:         Optional[str]   = None
+    zones:       Optional[list[int]] = None
     enabled:     bool  = True
 
     def validate_fields(self):
@@ -71,6 +73,7 @@ class SchedulePatch(BaseModel):
     temperature: Optional[float] = Field(default=None, ge=16, le=30)
     mode:        Optional[str]   = None
     fan:         Optional[str]   = None
+    zones:       Optional[list[int]] = None
     enabled:     Optional[bool]  = None
 
 
@@ -91,7 +94,7 @@ async def get_status():
 @app.get("/api/capabilities")
 async def get_capabilities():
     try:
-        return await daikin.fan_capabilities()
+        return await daikin.capabilities()
     except Exception as exc:
         raise HTTPException(502, f"Daikin unreachable: {exc}")
 
@@ -110,6 +113,19 @@ async def set_control(body: ControlIn):
         raise HTTPException(502, f"Daikin unreachable: {exc}")
 
 
+class ZonesIn(BaseModel):
+    zones: list[int]
+
+
+@app.post("/api/zones")
+async def set_zones(body: ZonesIn):
+    try:
+        result = await daikin.set_zone_setting(body.zones)
+        return {"ok": result.get("ret") == "OK", "raw": result}
+    except Exception as exc:
+        raise HTTPException(502, f"Daikin unreachable: {exc}")
+
+
 @app.get("/api/schedules")
 def list_schedules():
     return database.get_all()
@@ -118,9 +134,10 @@ def list_schedules():
 @app.post("/api/schedules", status_code=201)
 def create_schedule(body: ScheduleIn):
     body.validate_fields()
+    zones_json = json.dumps(body.zones) if body.zones is not None else None
     new_id = database.create(
         body.time, body.temperature, body.mode, body.action, body.enabled,
-        fan=body.fan,
+        fan=body.fan, zones=zones_json,
     )
     sched.reload_jobs()
     return {"id": new_id, **database.get_one(new_id)}
@@ -131,6 +148,12 @@ def update_schedule(schedule_id: int, body: SchedulePatch):
     if not database.get_one(schedule_id):
         raise HTTPException(404, "Schedule not found")
     updates = body.model_dump(exclude_none=True)
+    # zones=null means "reset to all" (distinct from absent). Check if it
+    # was explicitly sent so we can store NULL in the DB.
+    if "zones" not in updates and "zones" in body.model_fields_set:
+        updates["zones"] = None
+    elif "zones" in updates:
+        updates["zones"] = json.dumps(updates["zones"])
     if "action" in updates and updates["action"] not in VALID_ACTIONS:
         raise HTTPException(400, f"action must be one of {VALID_ACTIONS}")
     if "mode" in updates and updates["mode"] not in VALID_MODES:
@@ -145,6 +168,7 @@ def update_schedule(schedule_id: int, body: SchedulePatch):
             updates["temperature"] = None
             updates["mode"] = None
             updates["fan"] = None
+            updates["zones"] = None
         database.update(schedule_id, **updates)
         sched.reload_jobs()
     return database.get_one(schedule_id)

@@ -94,6 +94,53 @@ function FanSelect({ value, speeds, onChange, className = "", accent = false }) 
   );
 }
 
+// ── Zone Select ──────────────────────────────────────────────────────────────
+
+function isAllZones(onoff, count) {
+  if (!onoff) return true;
+  for (let i = 0; i < count; i++) {
+    if (!onoff[i]) return false;
+  }
+  return true;
+}
+
+function ZoneSelect({ zones, zoneInfo, onChange, className = "", accent = false }) {
+  if (!zoneInfo) return null;
+  const { count, names } = zoneInfo;
+  const current = zones || Array(count).fill(1);
+  const selectedIndices = current.slice(0, count)
+    .map((v, i) => (v ? String(i) : null))
+    .filter((v) => v !== null);
+
+  const handleChange = (e) => {
+    const selected = new Set(
+      Array.from(e.target.selectedOptions, (o) => Number(o.value)),
+    );
+    const next = Array(8).fill(0);
+    for (let i = 0; i < count; i++) next[i] = selected.has(i) ? 1 : 0;
+    if (isAllZones(next, count)) {
+      onChange(null);
+    } else {
+      onChange(next);
+    }
+  };
+
+  return (
+    <label className={`zone-select ${accent ? "zone-select--accent" : ""} ${className}`.trim()}>
+      <i className="ri-layout-grid-line zone-select__icon" />
+      <select
+        multiple
+        value={selectedIndices}
+        onChange={handleChange}
+      >
+        {names.map((name, i) => (
+          <option key={i} value={String(i)}>{name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 // ── Home Screen ──────────────────────────────────────────────────────────────
 
 function HomeScreen({
@@ -109,6 +156,9 @@ function HomeScreen({
   fanSpeed,
   fanSpeeds,
   onFanChange,
+  zones,
+  zoneInfo,
+  onZoneChange,
 }) {
   let scheduleIcon, scheduleLabel;
   if (paused) {
@@ -161,14 +211,24 @@ function HomeScreen({
       </div>
 
       <div className="home__footer">
-        {isOn && fanSpeeds?.length > 0 && (
+        {isOn && (fanSpeeds?.length > 0 || zoneInfo) && (
           <div className="home__controls">
-            <FanSelect
-              value={fanSpeed}
-              speeds={fanSpeeds}
-              onChange={onFanChange}
-              accent
-            />
+            {fanSpeeds?.length > 0 && (
+              <FanSelect
+                value={fanSpeed}
+                speeds={fanSpeeds}
+                onChange={onFanChange}
+                accent
+              />
+            )}
+            {zoneInfo && (
+              <ZoneSelect
+                zones={zones}
+                zoneInfo={zoneInfo}
+                onChange={onZoneChange}
+                accent={!isAllZones(zones, zoneInfo.count)}
+              />
+            )}
           </div>
         )}
         <NeuSwitch
@@ -184,7 +244,7 @@ function HomeScreen({
 
 // ── Schedule List (with FLIP reorder animation) ───────────────────────────────
 
-function ScheduleList({ schedules, onEditItem, fanSpeeds }) {
+function ScheduleList({ schedules, onEditItem, fanSpeeds, zoneInfo }) {
   const itemRefs = useRef({});
   const prevPositionsRef = useRef({});
   const isFirstRender = useRef(true);
@@ -261,6 +321,11 @@ function ScheduleList({ schedules, onEditItem, fanSpeeds }) {
                 {FAN_LABEL_MAP[s.fan] ?? FAN_LABEL_MAP["A"]}
               </span>
             )}
+            {zoneInfo && s.action !== "off" && (
+              <span className={`schedule-item__zone ${s.zones ? "schedule-item__zone--set" : ""}`}>
+                <i className="ri-layout-grid-line" />
+              </span>
+            )}
             <span className="schedule-item__time">{formatTime12(s.time)}</span>
           </div>
           {s.action === "setpoint" && s.temperature != null && (
@@ -282,11 +347,12 @@ function ScheduleScreen({
   paused,
   onTogglePause,
   fanSpeeds,
+  zoneInfo,
 }) {
   return (
     <div className="schedule-screen">
       <div className="schedule-list">
-        <ScheduleList schedules={schedules} onEditItem={onEditItem} fanSpeeds={fanSpeeds} />
+        <ScheduleList schedules={schedules} onEditItem={onEditItem} fanSpeeds={fanSpeeds} zoneInfo={zoneInfo} />
         <ActionButton
           className="schedule-add"
           variant="primary"
@@ -319,13 +385,17 @@ function ScheduleScreen({
 
 // ── Edit / Add Modal ─────────────────────────────────────────────────────────
 
-function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds }) {
+function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds, zoneInfo }) {
   const [time, setTime] = useState(item?.time || "16:00");
   const [temp, setTemp] = useState(item?.temperature ?? 22);
   const [dialValue, setDialValue] = useState(
     item?.action === "off" ? "power" : (item?.mode || "cool"),
   );
   const [fan, setFan] = useState(item?.fan || null);
+  const [zones, setZones] = useState(() => {
+    if (!item?.zones) return null;
+    return typeof item.zones === "string" ? JSON.parse(item.zones) : item.zones;
+  });
   const [exiting, setExiting] = useState(false);
 
   const isOff = dialValue === "power";
@@ -345,6 +415,7 @@ function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds }) {
         mode: isOff ? null : dialValue,
         action: isOff ? "off" : "setpoint",
         fan: isOff ? null : fan,
+        zones: isOff ? null : zones,
         enabled: true,
       })
     );
@@ -362,6 +433,14 @@ function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds }) {
                 speeds={fanSpeeds}
                 onChange={setFan}
                 accent={!!fan}
+              />
+            )}
+            {!isOff && zoneInfo && (
+              <ZoneSelect
+                zones={zones}
+                zoneInfo={zoneInfo}
+                onChange={setZones}
+                accent={!!zones && !isAllZones(zones, zoneInfo.count)}
               />
             )}
           </div>
@@ -437,7 +516,9 @@ export default function App() {
   const [localTemp, setLocalTemp] = useState(24);
   const [localPower, setLocalPower] = useState(true);
   const [localFan, setLocalFan] = useState("A");
+  const [localZones, setLocalZones] = useState(null);
   const [fanSpeeds, setFanSpeeds] = useState([]);
+  const [zoneInfo, setZoneInfo] = useState(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   // After a user action, ignore device state echoes for a grace period so
@@ -454,6 +535,7 @@ export default function App() {
         if (s.set_temp != null) setLocalTemp(s.set_temp);
         if (s.power != null) setLocalPower(s.power);
         if (s.fan != null) setLocalFan(s.fan);
+        if (s.zones) setLocalZones(s.zones);
       }
     } catch {
       setStatus(null);
@@ -476,6 +558,7 @@ export default function App() {
     try {
       const data = await api("/api/capabilities");
       if (data?.fan_speeds) setFanSpeeds(data.fan_speeds);
+      if (data?.zones) setZoneInfo(data.zones);
     } catch {
       // keep empty
     }
@@ -547,6 +630,19 @@ export default function App() {
       await api("/api/control", {
         method: "POST",
         body: JSON.stringify({ fan }),
+      });
+    } catch {
+      // keep local state
+    }
+  };
+
+  const changeZones = async (zones) => {
+    lastActionRef.current = Date.now();
+    setLocalZones(zones);
+    try {
+      await api("/api/zones", {
+        method: "POST",
+        body: JSON.stringify({ zones: zones || Array(8).fill(1) }),
       });
     } catch {
       // keep local state
@@ -640,6 +736,9 @@ export default function App() {
             fanSpeed={localFan}
             fanSpeeds={fanSpeeds}
             onFanChange={changeFanSpeed}
+            zones={localZones}
+            zoneInfo={zoneInfo}
+            onZoneChange={changeZones}
           />
         </div>
         <div className="card-face card-face--back">
@@ -651,6 +750,7 @@ export default function App() {
             paused={paused}
             onTogglePause={togglePause}
             fanSpeeds={fanSpeeds}
+            zoneInfo={zoneInfo}
           />
           {editItem && (
             <EditModal
@@ -659,6 +759,7 @@ export default function App() {
               onCancel={() => setEditItem(null)}
               onRemove={editItem !== "new" ? () => removeScheduleItem(editItem.id) : undefined}
               fanSpeeds={fanSpeeds}
+              zoneInfo={zoneInfo}
             />
           )}
         </div>

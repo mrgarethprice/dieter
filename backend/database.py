@@ -67,6 +67,8 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 
     if "fan" not in info:
         conn.execute("ALTER TABLE schedules ADD COLUMN fan TEXT")
+    if "zones" not in info:
+        conn.execute("ALTER TABLE schedules ADD COLUMN zones TEXT")
 
     needs_rebuild = (
         "label" in info
@@ -86,6 +88,7 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 
     # Clean up any partial migration left behind by a previous failed startup.
     fan_expr = "fan" if "fan" in info else "NULL"
+    zones_expr = "zones" if "zones" in info else "NULL"
 
     conn.execute("DROP TABLE IF EXISTS schedules_new")
     conn.execute("""
@@ -96,12 +99,13 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             temperature REAL,
             mode        TEXT,
             fan         TEXT,
+            zones       TEXT,
             enabled     INTEGER NOT NULL DEFAULT 1,
             created_at  TEXT    DEFAULT (datetime('now'))
         )
     """)
     conn.execute(f"""
-        INSERT INTO schedules_new (id, time, action, temperature, mode, fan, enabled, created_at)
+        INSERT INTO schedules_new (id, time, action, temperature, mode, fan, zones, enabled, created_at)
         SELECT
             id,
             time,
@@ -109,6 +113,7 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             CASE WHEN {action_expr} = 'off' THEN NULL ELSE {temperature_expr} END,
             CASE WHEN {action_expr} = 'off' THEN NULL ELSE {mode_expr} END,
             {fan_expr},
+            {zones_expr},
             {enabled_expr},
             {created_at_expr}
         FROM schedules
@@ -142,15 +147,16 @@ def get_one(schedule_id: int) -> dict | None:
 
 def create(time: str, temperature: float | None,
            mode: str | None, action: str, enabled: bool,
-           fan: str | None = None) -> int:
+           fan: str | None = None, zones: str | None = None) -> int:
     db_temp = None if action == "off" else temperature
     db_mode = None if action == "off" else mode
     db_fan = None if action == "off" else fan
+    db_zones = None if action == "off" else zones
     with _connect() as conn:
         cur = conn.execute(
-            """INSERT INTO schedules (time, action, temperature, mode, fan, enabled)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (time, action, db_temp, db_mode, db_fan, int(enabled)),
+            """INSERT INTO schedules (time, action, temperature, mode, fan, zones, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (time, action, db_temp, db_mode, db_fan, db_zones, int(enabled)),
         )
         conn.commit()
         return cur.lastrowid

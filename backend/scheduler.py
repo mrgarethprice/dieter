@@ -2,6 +2,7 @@
 Schedule runner — rebuilds APScheduler jobs from the DB whenever schedules change.
 All schedules fire every day of the week.
 """
+import json
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -85,6 +86,13 @@ async def _apply(schedule: dict) -> None:
                 temp=schedule["temperature"],
                 fan=schedule.get("fan"),
             )
+            # Zone persistence: reset to all zones unless schedule specifies
+            zones_raw = schedule.get("zones")
+            if zones_raw:
+                zones = json.loads(zones_raw) if isinstance(zones_raw, str) else zones_raw
+            else:
+                zones = [1] * 8
+            await _daikin.set_zone_setting(zones)
     except Exception as exc:
         log.error("Failed to apply schedule %s: %s", schedule["id"], exc)
 
