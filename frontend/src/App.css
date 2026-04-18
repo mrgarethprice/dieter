@@ -438,6 +438,12 @@ input {
   gap: 12px;
 }
 
+.schedule-item__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .schedule-item__icon {
   font-size: 20px;
   color: var(--neu-text-muted);

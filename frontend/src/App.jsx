@@ -77,15 +77,16 @@ function FanIcon({ className = "" }) {
 
 function FanSelect({ value, speeds, onChange, className = "", accent = false }) {
   if (!speeds?.length) return null;
-  const display = FAN_LABEL_MAP[value] ?? value;
+  const display = value ? (FAN_LABEL_MAP[value] ?? value) : "";
   return (
     <label className={`fan-select ${accent ? "fan-select--accent" : ""} ${className}`.trim()}>
       <FanIcon className="fan-select__icon" />
-      <span className="fan-select__value">{display}</span>
+      {display && <span className="fan-select__value">{display}</span>}
       <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
       >
+        <option value="">—</option>
         {speeds.map((s) => (
           <option key={s.value} value={s.value}>{s.label}</option>
         ))}
@@ -230,7 +231,6 @@ function HomeScreen({
                 value={fanSpeed}
                 speeds={fanSpeeds}
                 onChange={onFanChange}
-                accent
               />
             )}
             {zoneInfo && (
@@ -256,7 +256,7 @@ function HomeScreen({
 
 // ── Schedule List (with FLIP reorder animation) ───────────────────────────────
 
-function ScheduleList({ schedules, onEditItem, fanSpeeds, zoneInfo }) {
+function ScheduleList({ schedules, onEditItem }) {
   const itemRefs = useRef({});
   const prevPositionsRef = useRef({});
   const isFirstRender = useRef(true);
@@ -327,22 +327,24 @@ function ScheduleList({ schedules, onEditItem, fanSpeeds, zoneInfo }) {
                 <i className={getModeIcon(s.mode)} />
               )}
             </span>
-            {fanSpeeds?.length > 0 && s.action !== "off" && (
-              <span className={`schedule-item__fan ${s.fan ? "schedule-item__fan--set" : ""}`}>
+            <span className="schedule-item__time">{formatTime12(s.time)}</span>
+          </div>
+          <div className="schedule-item__right">
+            {s.fan && (
+              <span className="schedule-item__fan schedule-item__fan--set">
                 <FanIcon className="schedule-item__fan-icon" />
-                {FAN_LABEL_MAP[s.fan] ?? FAN_LABEL_MAP["A"]}
+                {FAN_LABEL_MAP[s.fan] ?? s.fan}
               </span>
             )}
-            {zoneInfo && s.action !== "off" && (
-              <span className={`schedule-item__zone ${s.zones ? "schedule-item__zone--set" : ""}`}>
+            {s.zones && (
+              <span className="schedule-item__zone schedule-item__zone--set">
                 <i className="ri-layout-grid-line" />
               </span>
             )}
-            <span className="schedule-item__time">{formatTime12(s.time)}</span>
+            {s.action === "setpoint" && s.temperature != null && (
+              <span className="schedule-item__temp">{s.temperature}°</span>
+            )}
           </div>
-          {s.action === "setpoint" && s.temperature != null && (
-            <span className="schedule-item__temp">{s.temperature}°</span>
-          )}
         </div>
       ))}
     </>
@@ -358,13 +360,11 @@ function ScheduleScreen({
   onAddItem,
   paused,
   onTogglePause,
-  fanSpeeds,
-  zoneInfo,
 }) {
   return (
     <div className="schedule-screen">
       <div className="schedule-list">
-        <ScheduleList schedules={schedules} onEditItem={onEditItem} fanSpeeds={fanSpeeds} zoneInfo={zoneInfo} />
+        <ScheduleList schedules={schedules} onEditItem={onEditItem} />
         <ActionButton
           className="schedule-add"
           variant="primary"
@@ -441,7 +441,7 @@ function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds, zoneInfo }) {
           <div className="edit-sheet__header-left">
             {!isOff && fanSpeeds?.length > 0 && (
               <FanSelect
-                value={fan ?? fanSpeeds[fanSpeeds.length - 1]?.value}
+                value={fan}
                 speeds={fanSpeeds}
                 onChange={setFan}
                 accent={!!fan}
@@ -762,8 +762,6 @@ export default function App() {
             onAddItem={() => setEditItem("new")}
             paused={paused}
             onTogglePause={togglePause}
-            fanSpeeds={fanSpeeds}
-            zoneInfo={zoneInfo}
           />
           {editItem && (
             <EditModal
