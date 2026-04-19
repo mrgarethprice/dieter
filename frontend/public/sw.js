@@ -1,5 +1,5 @@
 /* daikin-scheduler service worker */
-const CACHE   = 'daikin-v2';
+const CACHE   = 'daikin-v3';
 const SHELL   = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -32,7 +32,19 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for static assets; fall back to index.html for navigation
+  // Network-first for navigation (HTML) so deploys are picked up immediately
+  if (request.mode === 'navigate') {
+    e.respondWith(
+      fetch(request).then(response => {
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(request, clone));
+        return response;
+      }).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (hashed filenames make this safe)
   e.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
