@@ -819,18 +819,18 @@ export default function App() {
             paused={paused}
             onTogglePause={togglePause}
           />
-          {editItem && (
-            <EditModal
-              item={editItem === "new" ? null : editItem}
-              onSave={saveScheduleItem}
-              onCancel={() => setEditItem(null)}
-              onRemove={editItem !== "new" ? () => removeScheduleItem(editItem.id) : undefined}
-              fanSpeeds={fanSpeeds}
-              zoneInfo={zoneInfo}
-            />
-          )}
         </div>
       </div>
+      {editItem && (
+        <EditModal
+          item={editItem === "new" ? null : editItem}
+          onSave={saveScheduleItem}
+          onCancel={() => setEditItem(null)}
+          onRemove={editItem !== "new" ? () => removeScheduleItem(editItem.id) : undefined}
+          fanSpeeds={fanSpeeds}
+          zoneInfo={zoneInfo}
+        />
+      )}
     </div>
   );
 }
