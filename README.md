@@ -4,6 +4,8 @@ Named after [Dieter Rams](https://en.wikipedia.org/wiki/Dieter_Rams) — the pat
 
 It‘s a PWA, so it installs on your phone’s home screen and behaves like a native app.
 
+![Dieter app screenshot](./dieter-26-05-18.png)
+
 ## Who is this for?
 
 People who own a Daikin BRP15B61 and are comfortable with the command line. You don‘t need to be a developer, but you do need to be able to SSH into a machine, edit a text file, and run Docker.
@@ -33,8 +35,10 @@ Dieter needs somewhere to run continuously so it can fire schedules at the right
 
 - Different scheduling per day
 - No dry mode (who uses that?)
-- Doesn't support setups with separate per-zone temperatures
+- Doesn’t support setups with separate per-zone temperatures
 - Zone and fan speed discovery and display might be glitchy — only tested on one setup
+- Untested on Android
+- Untested on units using fahrenheit
 
 ## Setup
 
