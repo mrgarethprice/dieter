@@ -1,6 +1,6 @@
 # Dieter
 
-Named after [Dieter Rams](https://en.wikipedia.org/wiki/Dieter_Rams) — the patron saint of knobs and buttons — Dieter is a self-hosted scheduler for **Daikin FDYA / BRP15B61 Airbase** heat pumps. Set it and forget it: tell Dieter when to heat, when to cool, and when to shut up.
+Named after [Dieter Rams](https://en.wikipedia.org/wiki/Dieter_Rams) — the patron saint of quality knobs and buttons — Dieter is a self-hosted scheduler for **Daikin FDYA / BRP15B61 Airbase** heat pumps.
 
 It‘s a PWA, so it installs on your phone’s home screen and behaves like a native app.
 
@@ -12,9 +12,9 @@ People who own a Daikin BRP15B61 and are comfortable with the command line. You 
 
 ## What it does
 
-- Runs time-based schedules — as many as you like, including ’off‘ schedules
+- Runs time-based schedules — **as many as you like,** including ’off‘ schedules
 - Schedules can include changes to fan speed and zone
-- Shows live status (set temp, room temp, mode) with full manual control
+- Shows live status (set temp, room temp, mode) with **full manual control**
 - Allows pausing of scheduled changes if you’re away
 - Talks directly to the BRP15B61 on your local network — no Daikin cloud, no accounts, no subscriptions
 - Pleases your eyes and brain with easy to grok and use controls
