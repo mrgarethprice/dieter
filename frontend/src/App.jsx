@@ -15,6 +15,13 @@ const MODE_ICONS = {
   auto: "ri-arrow-up-down-line",
 };
 
+const MODE_OPTIONS = [
+  { value: "heat", label: "Heat" },
+  { value: "cool", label: "Cool" },
+  { value: "fan", label: "Fan" },
+  { value: "auto", label: "Auto" },
+];
+
 const FAN_LABEL_MAP = { "1": "1", "3": "2", "5": "3", A: "A" };
 
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -41,6 +48,16 @@ const MOCK_SCHEDULES = [
   { id: 3, time: "16:00", temperature: 24, mode: "cool", action: "setpoint", enabled: true },
   { id: 4, time: "23:00", temperature: 16, mode: "heat", action: "setpoint", enabled: true },
 ];
+
+const MOCK_CAPABILITIES = {
+  fan_speeds: [
+    { value: "1", label: "Low" },
+    { value: "3", label: "Mid" },
+    { value: "5", label: "High" },
+    { value: "A", label: "Auto" },
+  ],
+  zones: { count: 4, names: ["LIVING", "KITCHEN", "BEDROOM", "STUDY"], onoff: [1, 1, 1, 1] },
+};
 
 function formatTime12(time24) {
   const [h, m] = time24.split(":").map(Number);
@@ -77,6 +94,21 @@ function FanIcon({ className = "" }) {
     <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       <path d="M10.9121 1.48919C12.1849 1.07672 13.5503 1.04147 14.8427 1.38763L15.664 1.60833L14.4101 6.28411C15.1439 6.12076 15.9031 6.07591 16.6582 6.15716C17.9883 6.30036 19.2487 6.82532 20.2871 7.66888C21.3256 8.51263 22.0982 9.63918 22.5107 10.912C22.9232 12.1849 22.9584 13.5502 22.6123 14.8427L22.3925 15.664L17.7148 14.4101C17.8782 15.1439 17.924 15.903 17.8427 16.6581C17.6995 17.9883 17.1746 19.2486 16.331 20.287C15.4872 21.3256 14.3608 22.0982 13.0878 22.5107C11.8149 22.9232 10.4497 22.9584 9.15718 22.6122L8.21578 22.3603L8.59371 21.4618L8.59468 21.4579C8.59576 21.4554 8.59738 21.4514 8.59957 21.4462C8.60403 21.4355 8.61132 21.4194 8.62007 21.3984C8.63765 21.3561 8.66365 21.2932 8.69625 21.2138C8.76145 21.0549 8.8535 20.8281 8.96089 20.5575C9.17641 20.0146 9.45121 19.3008 9.69234 18.6074C9.81689 18.2492 9.92752 17.9086 10.0166 17.6064C9.15274 17.8572 8.24422 17.9398 7.34175 17.8427C6.01158 17.6995 4.75122 17.1746 3.71285 16.331C2.67431 15.4872 1.90172 14.3608 1.48921 13.0878C1.07672 11.8149 1.04145 10.4497 1.38765 9.15716L1.60836 8.33587L6.28414 9.5888C6.12099 8.85538 6.07598 8.09638 6.15718 7.34173C6.30042 6.01158 6.82533 4.75119 7.6689 3.71282C8.51267 2.67432 9.63918 1.90171 10.9121 1.48919ZM13.5625 2.87884C12.8485 2.80846 12.1247 2.88338 11.4365 3.10638C10.4757 3.41772 9.62511 4.00124 8.98824 4.78509C8.35159 5.56885 7.95565 6.52038 7.84761 7.52435C7.75335 8.40063 7.88164 9.28478 8.21871 10.0947C8.53335 10.8513 7.87297 11.7744 6.96871 11.5322L2.87886 10.4365C2.80829 11.1507 2.88332 11.8749 3.1064 12.5634C3.41775 13.5242 4.00126 14.3748 4.78511 15.0117C5.56889 15.6483 6.52036 16.0442 7.52437 16.1523C8.52842 16.2603 9.54201 16.0755 10.4433 15.62C10.5888 15.5465 10.9086 15.4196 11.2763 15.5546C11.677 15.7019 11.8302 16.042 11.8828 16.2255C11.9359 16.4111 11.9377 16.5936 11.9316 16.7226C11.9249 16.863 11.9044 17.0093 11.8789 17.1513C11.7792 17.7053 11.5453 18.4541 11.2978 19.1659C11.0536 19.8681 10.7783 20.582 10.5615 21.1298C11.2351 21.1801 11.915 21.1036 12.5634 20.8935C13.5242 20.5822 14.3748 19.9995 15.0117 19.2158C15.6485 18.4319 16.0442 17.4797 16.1523 16.4755C16.2465 15.5994 16.1182 14.7159 15.7812 13.9062C15.486 13.1969 16.0478 12.3403 16.8642 12.4355L17.0312 12.4677L21.1201 13.5624C21.1905 12.8485 21.1165 12.1247 20.8935 11.4365C20.5822 10.4757 19.9996 9.62508 19.2158 8.98821C18.4319 8.35135 17.4797 7.95565 16.4755 7.84759C15.5995 7.75338 14.7159 7.88176 13.9062 8.21868C13.1495 8.53361 12.2254 7.87306 12.4677 6.96868L13.5625 2.87884ZM11.1503 12.0097V11.9999C11.1504 11.5306 11.5306 11.1504 12 11.1503C12.4694 11.1503 12.8495 11.5305 12.8496 11.9999V12.0097C12.8496 12.4791 12.4694 12.8603 12 12.8603C11.5598 12.8602 11.1976 12.5254 11.1543 12.0966L11.1503 12.0097Z" />
     </svg>
+  );
+}
+
+// ── Mode Select ──────────────────────────────────────────────────────────────
+
+function ModeSelect({ value, onChange, className = "" }) {
+  return (
+    <label className={`mode-select ${className}`.trim()} aria-label="Mode">
+      <i className={getModeIcon(value)} />
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {MODE_OPTIONS.map((m) => (
+          <option key={m.value} value={m.value}>{m.label}</option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -206,6 +238,8 @@ function HomeScreen({
   nextSchedule,
   paused,
   onOpenSchedule,
+  mode,
+  onModeChange,
   fanSpeed,
   fanSpeeds,
   onFanChange,
@@ -216,7 +250,7 @@ function HomeScreen({
   let scheduleIcon, scheduleLabel;
   if (paused) {
     scheduleIcon = "ri-time-line";
-    scheduleLabel = "paused";
+    scheduleLabel = null;
   } else if (!nextSchedule) {
     scheduleIcon = "ri-time-line";
     scheduleLabel = "schedule";
@@ -233,6 +267,7 @@ function HomeScreen({
       <button
         className={`home__next-schedule ${!isOn ? "home__next-schedule--off" : ""}`}
         onClick={onOpenSchedule}
+        aria-label={paused ? "Schedule paused" : undefined}
       >
         <i className={scheduleIcon} />
         {scheduleLabel}
@@ -264,8 +299,9 @@ function HomeScreen({
       </div>
 
       <div className="home__footer">
-        {isOn && (fanSpeeds?.length > 0 || zoneInfo) && (
+        {isOn && (
           <div className="home__controls">
+            <ModeSelect value={mode} onChange={onModeChange} />
             {fanSpeeds?.length > 0 && (
               <FanSelect
                 value={fanSpeed}
@@ -296,8 +332,44 @@ function HomeScreen({
 
 // ── Schedule List (with FLIP reorder animation) ───────────────────────────────
 
-function ScheduleList({ schedules, onEditItem }) {
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+
+function ScheduleList({ schedules, onEditItem, onToggleItem }) {
   const itemRefs = useRef({});
+  const pressRef = useRef({ timer: null, fired: false, x: 0, y: 0 });
+
+  const startPress = (s, e) => {
+    const press = pressRef.current;
+    clearTimeout(press.timer);
+    press.fired = false;
+    press.x = e.clientX;
+    press.y = e.clientY;
+    press.timer = setTimeout(() => {
+      press.fired = true;
+      onToggleItem(s);
+    }, LONG_PRESS_MS);
+  };
+
+  const cancelPress = () => clearTimeout(pressRef.current.timer);
+
+  const movePress = (e) => {
+    const press = pressRef.current;
+    if (
+      Math.abs(e.clientX - press.x) > LONG_PRESS_MOVE_TOLERANCE ||
+      Math.abs(e.clientY - press.y) > LONG_PRESS_MOVE_TOLERANCE
+    ) {
+      cancelPress();
+    }
+  };
+
+  const handleClick = (s) => {
+    if (pressRef.current.fired) {
+      pressRef.current.fired = false;
+      return;
+    }
+    onEditItem(s);
+  };
   const prevPositionsRef = useRef({});
   const isFirstRender = useRef(true);
 
@@ -356,8 +428,14 @@ function ScheduleList({ schedules, onEditItem }) {
           ref={(el) => {
             itemRefs.current[s.id] = el;
           }}
-          className="schedule-item"
-          onClick={() => onEditItem(s)}
+          className={`schedule-item${s.enabled ? "" : " schedule-item--paused"}`}
+          onClick={() => handleClick(s)}
+          onPointerDown={(e) => startPress(s, e)}
+          onPointerMove={movePress}
+          onPointerUp={cancelPress}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
+          onContextMenu={(e) => e.preventDefault()}
         >
           <div className="schedule-item__left">
             <span className="schedule-item__icon">
@@ -397,14 +475,19 @@ function ScheduleScreen({
   schedules,
   onDone,
   onEditItem,
+  onToggleItem,
   onAddItem,
   paused,
   onTogglePause,
 }) {
   return (
     <div className="schedule-screen">
-      <div className="schedule-list">
-        <ScheduleList schedules={schedules} onEditItem={onEditItem} />
+      <div className={`schedule-list${paused ? " schedule-list--paused" : ""}`}>
+        <ScheduleList
+          schedules={schedules}
+          onEditItem={onEditItem}
+          onToggleItem={onToggleItem}
+        />
         <ActionButton
           className="schedule-add"
           variant="primary"
@@ -485,7 +568,7 @@ function EditModal({ item, onSave, onCancel, onRemove, fanSpeeds, zoneInfo }) {
         action: isOff ? "off" : "setpoint",
         fan: isOff ? null : fan,
         zones: isOff ? null : zones,
-        enabled: true,
+        enabled: item?.enabled ?? true,
       })
     );
   };
@@ -586,6 +669,7 @@ export default function App() {
 
   const [localTemp, setLocalTemp] = useState(24);
   const [localPower, setLocalPower] = useState(true);
+  const [localMode, setLocalMode] = useState("heat");
   const [localFan, setLocalFan] = useState("A");
   const [localZones, setLocalZones] = useState(null);
   const [fanSpeeds, setFanSpeeds] = useState([]);
@@ -605,6 +689,7 @@ export default function App() {
       if (!stale) {
         if (s.set_temp != null) setLocalTemp(s.set_temp);
         if (s.power != null) setLocalPower(s.power);
+        if (MODE_ICONS[s.mode]) setLocalMode(s.mode);
         if (s.fan != null) setLocalFan(s.fan);
         if (s.zones) setLocalZones(s.zones);
       }
@@ -631,7 +716,10 @@ export default function App() {
       if (data?.fan_speeds) setFanSpeeds(data.fan_speeds);
       if (data?.zones) setZoneInfo(data.zones);
     } catch {
-      // keep empty
+      if (process.env.NODE_ENV === "development") {
+        setFanSpeeds(MOCK_CAPABILITIES.fan_speeds);
+        setZoneInfo(MOCK_CAPABILITIES.zones);
+      }
     }
   }, []);
 
@@ -692,6 +780,19 @@ export default function App() {
         // keep local state
       }
     }, 300);
+  };
+
+  const changeMode = async (mode) => {
+    lastActionRef.current = Date.now();
+    setLocalMode(mode);
+    try {
+      await api("/api/control", {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      });
+    } catch {
+      // keep local state
+    }
   };
 
   const changeFanSpeed = async (fan) => {
@@ -771,6 +872,21 @@ export default function App() {
     setEditItem(null);
   };
 
+  const toggleScheduleItem = async (item) => {
+    const enabled = !item.enabled;
+    setSchedules((prev) =>
+      prev.map((s) => (s.id === item.id ? { ...s, enabled } : s)),
+    );
+    try {
+      await api(`/api/schedules/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      });
+    } catch {
+      // keep local state
+    }
+  };
+
   const removeScheduleItem = async (id) => {
     setSchedules((prev) => prev.filter((s) => s.id !== id));
     setEditItem(null);
@@ -810,6 +926,8 @@ export default function App() {
             nextSchedule={nextSchedule}
             paused={paused}
             onOpenSchedule={() => setScreen("schedule")}
+            mode={localMode}
+            onModeChange={changeMode}
             fanSpeed={localFan}
             fanSpeeds={fanSpeeds}
             onFanChange={changeFanSpeed}
@@ -823,6 +941,7 @@ export default function App() {
             schedules={schedules}
             onDone={() => setScreen("home")}
             onEditItem={(item) => setEditItem(item)}
+            onToggleItem={toggleScheduleItem}
             onAddItem={() => setEditItem("new")}
             paused={paused}
             onTogglePause={togglePause}
